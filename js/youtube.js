@@ -209,9 +209,11 @@
     try { d = this.player.getVideoData(); } catch (err) { void err; }
     try { this.ids = this.player.getPlaylist() || []; } catch (err2) { void err2; }
     if (d && d.video_id) this.titles[d.video_id] = d.title;
+    var title = (d && d.title && d.title !== "YouTube") ? d.title : "শারদীয়া";
+    var author = (d && d.author && d.author !== "YouTube") ? d.author : "pujo radio";
     this.h.onTrack && this.h.onTrack({
-      title: (d && d.title) || "YouTube",
-      author: (d && d.author) || "",
+      title: title,
+      author: author,
       id: d && d.video_id,
       index: this.index(),
       total: this.count()
@@ -249,10 +251,20 @@
     if (!ids.length) return;
 
     if (opts.shuffle) {
-      for (var i = ids.length - 1; i > 0; i--) {
-        var j = (Math.random() * (i + 1)) | 0;
-        var t = ids[i]; ids[i] = ids[j]; ids[j] = t;
+      var preferred = Math.min(8, ids.length);
+      var head = ids.slice(0, preferred);
+      var tail = ids.slice(preferred);
+      var mixed = [];
+      while (head.length || tail.length) {
+        if (head.length && (tail.length === 0 || Math.random() < 0.82)) {
+          var hi = (Math.random() * head.length) | 0;
+          mixed.push(head.splice(hi, 1)[0]);
+        } else if (tail.length) {
+          var ti = (Math.random() * tail.length) | 0;
+          mixed.push(tail.splice(ti, 1)[0]);
+        }
       }
+      ids = mixed;
     }
     this.queue = ids;
     this.dbg("youtube: queue of " + ids.length + " ids, driving them one at a time");

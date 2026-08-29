@@ -124,6 +124,24 @@
   };
 
   /* list: [{ src, title, artist }] */
+  function weightedShuffle(items, priorityCount) {
+    var arr = items.slice();
+    if (arr.length < 2) return arr;
+    var preferred = arr.slice(0, Math.min(priorityCount || 0, arr.length));
+    var rest = arr.slice(Math.min(priorityCount || 0, arr.length));
+    var mixed = [];
+    while (preferred.length || rest.length) {
+      if (preferred.length && (rest.length === 0 || Math.random() < 0.8)) {
+        var i = (Math.random() * preferred.length) | 0;
+        mixed.push(preferred.splice(i, 1)[0]);
+      } else if (rest.length) {
+        var j = (Math.random() * rest.length) | 0;
+        mixed.push(rest.splice(j, 1)[0]);
+      }
+    }
+    return mixed;
+  }
+
   Player.prototype.useLocal = function (list, autoplay) {
     this._buildLocal();
     if (this.yt) this.yt.pause();
@@ -132,13 +150,8 @@
     this.mode = "local";
     this.badLocal = 0;
     this.list = list.slice();
-    if (this.shuffle) {
-      for (var i = this.list.length - 1; i > 0; i--) {
-        var j = (Math.random() * (i + 1)) | 0;
-        var t = this.list[i]; this.list[i] = this.list[j]; this.list[j] = t;
-      }
-    }
-    this.idx = 0;
+    if (this.shuffle) this.list = weightedShuffle(this.list, 6);
+    this.idx = this.shuffle && this.list.length ? (Math.random() * this.list.length) | 0 : 0;
     this._log("local: " + this.list.length + " file(s) queued");
     this._loadLocal(autoplay !== false);
   };
@@ -201,7 +214,7 @@
     this.ensemble.stop();
     if (this.audio) this.audio.pause();
     this.mode = "youtube";
-    this.onTrack({ title: "Loading from YouTube…", sub: "", index: 0, total: 0, live: false });
+    this.onTrack({ title: "শারদীয়া", sub: "pujo radio", index: 0, total: 0, live: false });
 
     return this.yt.init().then(function () {
       self.yt.repeatOne = self.repeatOne;

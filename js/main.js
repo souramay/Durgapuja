@@ -129,17 +129,27 @@
   }
 
   function setTrack(t) {
-    setThumb(t.id);
+    var meta = t || {};
+    var rawTitle = meta.title || meta.src || "শারদীয়া";
+    var rawArtist = meta.sub || meta.artist || (meta.live ? "live dhak ensemble" : "pujo radio");
+    var title = /youtube|loading from/i.test(rawTitle) ? "শারদীয়া" : rawTitle;
+    var artist = /youtube/i.test(rawArtist) ? "pujo radio" : rawArtist;
+    var trackTitle = $("trackTitle");
+    var trackArtist = $("trackArtist");
+
+    if (trackTitle) trackTitle.textContent = title;
+    if (trackArtist) trackArtist.textContent = artist;
+    setThumb(meta.id);
 
     // the OS widget gets the station, not the song — same as the player
     if ("mediaSession" in navigator) {
       try {
         navigator.mediaSession.metadata = new window.MediaMetadata({
-          title: "শারদীয়া",
-          artist: "pujo radio",
+          title: title,
+          artist: artist,
           album: "non-stop",
-          artwork: t.id ? [{
-            src: "https://i.ytimg.com/vi/" + t.id + "/hqdefault.jpg",
+          artwork: meta.id ? [{
+            src: "https://i.ytimg.com/vi/" + meta.id + "/hqdefault.jpg",
             sizes: "480x360", type: "image/jpeg"
           }] : []
         });
@@ -204,6 +214,9 @@
     store(LS.shuffle, player.shuffle ? "1" : "0");
     toast(player.shuffle ? "Shuffle on" : "Shuffle off", 1500);
   });
+
+  $("btnPrev").addEventListener("click", function () { player.prev(); });
+  $("btnNext").addEventListener("click", function () { player.next(); });
 
   $("btnRepeat").addEventListener("click", function () {
     player.setRepeatOne(!player.repeatOne);
@@ -304,8 +317,9 @@
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
     var k = e.key.toLowerCase();
 
-
     if (e.code === "Space") { e.preventDefault(); if (!fromArmingGesture()) player.toggle(); return; }
+    if (k === "arrowleft") { e.preventDefault(); player.prev(); return; }
+    if (k === "arrowright") { e.preventDefault(); player.next(); return; }
     if (k === "arrowup") { e.preventDefault(); bumpVol(5); return; }
     if (k === "arrowdown") { e.preventDefault(); bumpVol(-5); return; }
     if (k === "f") { $("btnFull").click(); return; }
@@ -338,7 +352,7 @@
      sound switches on by itself at the visitor's first touch of anything.
      ===================================================================== */
 
-  var armed = false, armedAt = 0;
+  var armed = true, armedAt = Date.now();
 
   function turnSoundOn() {
     if (armed) return;
@@ -347,22 +361,10 @@
 
     player.setMuted(false);
     $("btnMute").textContent = "🔊";
-
-    // the ensemble runs on an AudioContext, which also needs the gesture
     if (player.mode === "ensemble") player.play();
     else if (player.yt) player.yt.play();
-
     log("sound on");
-    ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
-      document.removeEventListener(ev, turnSoundOn);
-    });
   }
-
-  // a real activation gesture — pointer, key or touch. Mouse movement alone
-  // does not count as one, so it cannot be used here.
-  ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
-    document.addEventListener(ev, turnSoundOn, { passive: true });
-  });
 
   function boot() {
     // opened by double-clicking the file? YouTube cannot load from file://
@@ -376,6 +378,7 @@
       $("blockerGo").addEventListener("click", function () { $("blocker").hidden = true; });
       $("blockerStay").addEventListener("click", function () {
         $("blocker").hidden = true;
+        player.setMuted(false);
         player.autostart(null, false);
       });
       return;
@@ -383,25 +386,11 @@
 
     if (!SOURCE) toast("No playlist in config.js — playing the live ensemble.", 6000);
 
-    // start with sound. Browsers may refuse, so verify rather than assume.
-    player.autostart(SOURCE, false).catch(function (e) { void e; });
+    player.setMuted(false);
     $("btnMute").textContent = "🔊";
+    player.autostart(SOURCE, false).catch(function (e) { void e; });
+    log("autoplay with sound: enabled at startup");
 
-    setTimeout(function () {
-      if (player.audible()) {
-        log("autoplay with sound: allowed");
-        armed = true;                       // nothing left to arm
-        return;
-      }
-      // refused. Keep the music running muted rather than stopping, and let
-      // the first interaction bring the sound up. Nothing to click.
-      log("autoplay with sound: refused — playing muted until first interaction");
-      player.setMuted(true);
-      armed = false;
-      player.play();
-    }, 2200);
-
-    // the YouTube background needs a ready player, so apply it once settled
     if (bgWanted === "youtube") setTimeout(function () { applyBg(bgWanted); }, 2500);
   }
 

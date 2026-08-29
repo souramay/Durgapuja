@@ -40,7 +40,20 @@ var PLAYLIST = "";
    labels for you, not shown anywhere on the site.
    Anything that refuses to embed is skipped automatically.   */
 var TRACKS = [
-  /* --- Agomoni & classics (Saregama) --- */
+  /* --- modern / crowd favourites first --- */
+  { id: "4Vli8y0SE_E", title: "Elo Elo Maa Bolo Durga Durga",       artist: "Rajashri Bag" },
+  { id: "e2Ap7GTCW2o", title: "Alote Hasite Durga Maa",             artist: "Rajashri Bag & Sanju Kumar" },
+  { id: "uGRpMREPAOo", title: "Joy Joy Durga",                      artist: "Swagatalakshmi Dasgupta" },
+  { id: "3E_qefwPA0E", title: "Joy Joy Durga Maa",                  artist: "Jeet Gannguli, Shaan, Abhijeet" },
+  { id: "9Hmp6u1cx3I", title: "Dhak Baja Kashor Baja",             artist: "Shreya Ghoshal" },
+  { id: "XyatKcoBrPw", title: "Bolo Dugga Elo",                    artist: "Sunidhi Chauhan, Nakash Aziz" },
+  { id: "xlElO06nQy8", title: "Dugga Elo",                          artist: "Monali Thakur" },
+  { id: "VL8EAkTiQMg", title: "Aschhen Ma Durga",                   artist: "Kharaj Mukherjee" },
+  { id: "NDu0g-b9eAw", title: "Ma Go Durga Ma Go",                 artist: "Raghab Chatterjee" },
+  { id: "ofS5KNgC3mw", title: "Ogo Durga Maa",                      artist: "Saikat Mitra" },
+  { id: "tZKOQg7AxHE", title: "Toke Jodi Na Daki Ma",              artist: "Swagatalakshmi Dasgupta" },
+  { id: "IYbuA0FyF90", title: "Jani Tumi Achho Ma Go",             artist: "Saikat Mitra" },
+  { id: "JtpoXa8oa4k", title: "Anek Bytha Niye",                   artist: "Sriradha Banerjee" },
   { id: "IISWE2RiDBU", title: "Bajlo Tomar Alor Benu",              artist: "Debolinaa Nandy" },
   { id: "IfSJy3_Lkuo", title: "Jago Durga Dashapraharanadharinee",  artist: "Dwijen Mukherjee" },
   { id: "45O8KBhSZ0I", title: "Durge Durge Durgatinashini",         artist: "Asha Bhosle" },
@@ -58,11 +71,6 @@ var TRACKS = [
   { id: "XkPrietm2QU", title: "Ananda Mate Girirajpuri",            artist: "Chandrabali Rudra" },
   { id: "iMJzZhZbPbM", title: "Barsha Gelo Aswin Elo",              artist: "Nirmal Mukherjee" },
   { id: "TKizNkA5dvE", title: "O Maa Dashabhujaa",                  artist: "Swapna Chakraborty" },
-
-  /* --- modern --- */
-  { id: "4Vli8y0SE_E", title: "Elo Elo Maa Bolo Durga Durga",       artist: "Rajashri Bag" },
-  { id: "uGRpMREPAOo", title: "Joy Joy Durga",                      artist: "Swagatalakshmi Dasgupta" },
-  { id: "VL8EAkTiQMg", title: "Aschhen Ma Durga",                   artist: "Kharaj Mukherjee" },
 
   /* --- Mahalaya --- */
   { id: "YQyo8QeoYhc", title: "Mahishasura Mardini",                artist: "Birendra Krishna Bhadra" },

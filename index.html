@@ -3,11 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>শারদীয়া — Sharodiya</title>
-<meta name="description" content="Non-stop Durga Puja music over cartoon Puja posters.">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="description" content="শারদীয়া is a Durga Puja radio experience with nonstop devotional music, Bengali pujo vibes, and animated poster visuals.">
+<meta name="keywords" content="Durga Puja music, Pujo radio, Sharodiya, Shardiya, Bengali Durga Puja songs, Puja music website, Durga Puja playlist, Bangla devotional songs">
 <meta name="theme-color" content="#150C22">
-<meta property="og:title" content="শারদীয়া — Sharodiya">
-<meta property="og:description" content="Non-stop Durga Puja music over cartoon Puja posters.">
+<meta name="author" content="শারদীয়া">
+<link rel="canonical" href="https://souramay.vercel.app/">
+<title>শারদীয়া | Durga Puja Radio | Bengali Puja Songs</title>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="শারদীয়া">
+<meta property="og:title" content="শারদীয়া | Durga Puja Radio | Bengali Puja Songs">
+<meta property="og:description" content="Listen to nonstop Durga Puja songs, Bengali devotional music, and festive Pujo vibes in one beautiful poster-style radio experience.">
+<meta property="og:url" content="https://souramay.vercel.app/">
+<meta property="og:image" content="https://souramay.vercel.app/og-image.jpg">
+<meta property="og:locale" content="bn_IN">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="শারদীয়া — Durga Puja Radio">
+<meta name="twitter:description" content="Nonstop Durga Puja music with poster-style visuals and Bengali festive vibes.">
+<meta name="twitter:image" content="https://your-domain.com/og-image.jpg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,6 +39,11 @@
 <div class="grain" aria-hidden="true"></div>
 <div class="shade" aria-hidden="true"></div>
 
+<div class="track-overlay" aria-live="polite">
+  <div class="track-kicker">now playing</div>
+  <div id="trackTitle" class="track-title">শারদীয়া</div>
+  <div id="trackArtist" class="track-artist">pujo radio</div>
+</div>
 
 <!-- ================= TOP ================= -->
 <header class="topbar" id="topbar">
@@ -57,9 +77,11 @@
     </div>
 
     <div class="controls">
+      <button type="button" id="btnPrev" class="ctl nav" title="Previous track" aria-label="Previous track">⏮</button>
       <button type="button" id="btnShuffle" class="ctl small" title="Shuffle" aria-label="Shuffle">⤨</button>
       <button type="button" id="btnPlay" class="ctl play" title="Play / pause" aria-label="Play or pause"><span id="playIcon">▶</span></button>
       <button type="button" id="btnRepeat" class="ctl small is-on" title="Repeat all — non-stop" aria-label="Repeat">⟲</button>
+      <button type="button" id="btnNext" class="ctl nav" title="Next track" aria-label="Next track">⏭</button>
     </div>
 
     <div class="right">
@@ -97,6 +119,23 @@
   </div>
 </div>
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "MusicRadioStation",
+  "name": "শারদীয়া",
+  "alternateName": "Sharodiya",
+  "description": "A Durga Puja radio experience featuring nonstop Bengali devotional songs and festive poster visuals.",
+  "url": "https://souramay.vercel.app/",
+  "inLanguage": ["bn", "en"],
+  "genre": ["Bengali Music", "Durga Puja", "Devotional"],
+  "image": "https://souramay.vercel.app/og-image.jpg",
+  "sameAs": [
+    "https://www.facebook.com/",
+    "https://www.instagram.com/"
+  ]
+}
+</script>
 <script src="config.js"></script>
 <script src="js/scenes.js"></script>
 <script src="js/ensemble.js"></script>
