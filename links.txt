@@ -1,0 +1,35 @@
+# Paste real YouTube URLs after each song name, then run:
+#     node tools/make-tracks.mjs links.txt
+# Copy what it prints into config.js, replacing the TRACKS block.
+#
+# HOW: search the name on YouTube, click the video, copy the address bar.
+# It must look like  https://www.youtube.com/watch?v=XXXXXXXXXXX
+# Delete any line you don't want. Blank ones are ignored.
+#
+# FASTER: skip all of this and put ONE playlist id in config.js instead.
+# Open any Durga Puja playlist, copy the bit after "list=" in the URL,
+# and set  var PLAYLIST = "PLxxxxxxxxxxxx";
+
+Dhak Baja Kashor Baja —
+Bajlo Tomar Alor Benu —
+Jago Durga Dashapraharanadharinee —
+Durge Durge Durgatinashini —
+Aji Shankhe Shankhe Mangala Gao —
+Ogo Amar Agamani Alo —
+Trinayanee Maa —
+Joy Jagajjanani —
+Jayanti Mangala Kali —
+Korechhi Pujar Aayojan —
+Jao Jao Giriraj —
+Barsha Gelo Aswin Elo —
+O Maa Dashabhujaa —
+Elo Elo Maa Bolo Durga Durga —
+Joy Joy Durga —
+Aschhen Ma Durga —
+Ogo Durga Ma —
+Mahishasura Mardini —
+Ya Devi Sarvabhuteshu —
+Aigiri Nandini —
+Dhaker Taley —
+Ebar Jeno Onno Rokom Pujo —
+Dugga Elo —
