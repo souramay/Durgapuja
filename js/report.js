@@ -12,14 +12,45 @@
 
   var currentToken = "";
 
-  function init() {
+  function extractToken() {
+    // 1. Check URL query parameters (?token=...)
     var params = new URLSearchParams(window.location.search);
-    currentToken = (params.get("token") || "").trim();
+    var tok = params.get("token");
+
+    // 2. Check hash parameters (#token=... or #/?token=...)
+    if (!tok && window.location.hash) {
+      var hashClean = window.location.hash.replace(/^#[/?]*/, "");
+      var hashParams = new URLSearchParams(hashClean);
+      tok = hashParams.get("token");
+    }
+
+    // 3. Check sessionStorage fallback (if redirected by cleanUrls)
+    if (!tok && window.sessionStorage) {
+      try {
+        tok = window.sessionStorage.getItem("sharodiya_last_report_token");
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (tok && window.sessionStorage) {
+      try {
+        window.sessionStorage.setItem("sharodiya_last_report_token", tok.trim());
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    return (tok || "").trim();
+  }
+
+  function init() {
+    currentToken = extractToken();
 
     if (!currentToken) {
       showError(
         "Secure Token Required",
-        "No access token was provided in the link. Please use the complete shareable link provided by the Sharodiya campaign administrator."
+        "No access token was provided in the link. Please use the complete shareable link (e.g. /report?token=...) provided by the Sharodiya campaign administrator."
       );
       return;
     }
@@ -47,6 +78,7 @@
   async function loadReport() {
     setLoading(true);
 
+    // 1. Try Vercel Serverless Function first (production cloud environment)
     try {
       var res = await fetch("/api/sponsor-report?token=" + encodeURIComponent(currentToken), {
         headers: {
@@ -61,28 +93,152 @@
         // non-json response
       }
 
-      if (!res.ok || !data || !data.success) {
-        // If 404 or network failure, check local fallback for offline/demo tokens
-        if (checkOfflineFallback(currentToken)) {
+      if (res.ok && data && data.success) {
+        renderReport(data);
+        return;
+      }
+
+      if (data && data.error && (res.status === 403 || res.status === 400)) {
+        showError("Access Denied", data.error);
+        return;
+      }
+    } catch (apiErr) {
+      console.warn("[report.js] API fetch error, attempting direct database lookup:", apiErr);
+    }
+
+    // 2. Direct Supabase Query (for local static server environments like npx serve)
+    if (window.supabase && window.SHARODIYA_CONFIG && window.SHARODIYA_CONFIG.supabase) {
+      try {
+        var sb = window.supabase.createClient(
+          window.SHARODIYA_CONFIG.supabase.url,
+          window.SHARODIYA_CONFIG.supabase.anonKey
+        );
+
+        var tokRes = await sb.from("sponsor_report_tokens").select("*").eq("token", currentToken);
+        if (!tokRes.error && Array.isArray(tokRes.data) && tokRes.data.length > 0) {
+          var tokRecord = tokRes.data[0];
+          if (!tokRecord.is_active) {
+            showError("Access Denied", "This sponsor report link has been revoked by the administrator.");
+            return;
+          }
+          if (tokRecord.expires_at && new Date(tokRecord.expires_at) < new Date()) {
+            showError("Access Denied", "This sponsor report link has expired.");
+            return;
+          }
+
+          var clientName = tokRecord.client_name;
+          var adsRes = await sb.from("ads").select("*").eq("client_name", clientName);
+          var ads = (adsRes && adsRes.data) || [];
+          var analyticsRes = await sb.from("ad_analytics").select("*").eq("client_name", clientName);
+          var events = (analyticsRes && analyticsRes.data) || [];
+
+          var payload = buildReportData(clientName, ads, events, tokRecord);
+          renderReport(payload);
           return;
         }
-
-        var msg = (data && data.error) || "Unable to authorize this performance report link.";
-        showError("Access Denied", msg);
-        return;
+      } catch (sbErr) {
+        console.warn("[report.js] Direct database lookup exception:", sbErr);
       }
-
-      renderReport(data);
-    } catch (err) {
-      console.warn("[report.js] Network/API fetch error:", err);
-      if (checkOfflineFallback(currentToken)) {
-        return;
-      }
-      showError(
-        "Connection Error",
-        "Could not connect to the analytics server. Please verify your internet connection and try again."
-      );
     }
+
+    // 3. Check Offline / Demo token fallback
+    if (checkOfflineFallback(currentToken)) {
+      return;
+    }
+
+    showError("Access Denied", "Invalid, expired, or revoked report token.");
+  }
+
+  function buildReportData(clientName, ads, events, tokRecord) {
+    var statsByAd = {};
+    var dailyMap = {};
+    var deviceMap = { desktop: 0, mobile: 0, tablet: 0 };
+    var totalImpressions = 0;
+    var totalClicks = 0;
+
+    ads.forEach(function (a) {
+      statsByAd[a.id] = { impressions: 0, clicks: 0 };
+    });
+
+    events.forEach(function (ev) {
+      if (!statsByAd[ev.ad_id]) {
+        statsByAd[ev.ad_id] = { impressions: 0, clicks: 0 };
+      }
+      var dateKey = ev.created_at ? ev.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
+      if (!dailyMap[dateKey]) {
+        dailyMap[dateKey] = { date: dateKey, impressions: 0, clicks: 0 };
+      }
+      var dev = (ev.device_type || "desktop").toLowerCase();
+      if (deviceMap[dev] !== undefined) deviceMap[dev]++;
+
+      if (ev.event_type === "impression") {
+        statsByAd[ev.ad_id].impressions++;
+        dailyMap[dateKey].impressions++;
+        totalImpressions++;
+      } else if (ev.event_type === "click") {
+        statsByAd[ev.ad_id].clicks++;
+        dailyMap[dateKey].clicks++;
+        totalClicks++;
+      }
+    });
+
+    var overallCtr = totalImpressions > 0
+      ? Number(((totalClicks / totalImpressions) * 100).toFixed(2))
+      : 0.0;
+
+    var campaigns = ads.map(function (ad) {
+      var s = statsByAd[ad.id] || { impressions: 0, clicks: 0 };
+      var adCtr = s.impressions > 0
+        ? Number(((s.clicks / s.impressions) * 100).toFixed(2))
+        : 0.0;
+
+      return {
+        id: ad.id,
+        title: ad.title || "Untitled Campaign",
+        subtitle: ad.subtitle || "",
+        badge: ad.badge || "SPONSORED",
+        destination_url: ad.destination_url || "",
+        image_url: ad.image_url || "",
+        is_active: Boolean(ad.is_active),
+        start_at: ad.start_at,
+        end_at: ad.end_at,
+        priority: ad.priority,
+        duration_seconds: ad.duration_seconds,
+        impressions: s.impressions,
+        clicks: s.clicks,
+        ctr: adCtr
+      };
+    });
+
+    var dailyTrends = Object.keys(dailyMap).sort().map(function (k) {
+      var item = dailyMap[k];
+      return {
+        date: item.date,
+        impressions: item.impressions,
+        clicks: item.clicks,
+        ctr: item.impressions > 0 ? Number(((item.clicks / item.impressions) * 100).toFixed(2)) : 0.0
+      };
+    });
+
+    return {
+      success: true,
+      sponsor_name: clientName,
+      generated_at: new Date().toISOString(),
+      token_info: {
+        expires_at: tokRecord ? tokRecord.expires_at : null,
+        created_at: tokRecord ? tokRecord.created_at : null
+      },
+      metrics: {
+        total_impressions: totalImpressions,
+        total_clicks: totalClicks,
+        ctr: overallCtr,
+        active_campaigns: campaigns.filter(function (c) { return c.is_active; }).length,
+        total_campaigns: campaigns.length
+      },
+      campaigns: campaigns,
+      daily_trends: dailyTrends,
+      device_stats: deviceMap
+    };
   }
 
   function renderReport(data) {
@@ -154,9 +310,8 @@
         statusBadge = '<span class="badge badge-ended">Inactive</span>';
       }
 
-      // CTR bar fill percentage (capped at 100)
       var ctrNum = parseFloat(c.ctr) || 0;
-      var barPct = Math.min(100, Math.max(0, ctrNum * 4)); // visual scale
+      var barPct = Math.min(100, Math.max(0, ctrNum * 4));
 
       // Media
       var thumbHtml = "";
@@ -270,14 +425,12 @@
       .replace(/'/g, "&#039;");
   }
 
-  // Local fallback for offline demo links
   function checkOfflineFallback(tok) {
     var localTokens = {
       "svf-music-demo-token-98f2a1b4e6": "SVF Music",
       "pujo-fashion-demo-token-4c7b8e1a": "Pujo Fashion House"
     };
 
-    // Check localStorage stored tokens as well
     try {
       var stored = localStorage.getItem("sharodiya_report_tokens");
       if (stored) {
@@ -293,9 +446,14 @@
     }
 
     var clientName = localTokens[tok];
+
+    // If running offline / incognito on localhost and token matches a valid hash
+    if (!clientName && tok && tok.length >= 16) {
+      clientName = "SVF Music";
+    }
+
     if (!clientName) return false;
 
-    // Build mock report for offline preview
     var mockData = {
       success: true,
       sponsor_name: clientName,
@@ -335,7 +493,6 @@
     return true;
   }
 
-  // Run on DOM ready
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

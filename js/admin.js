@@ -904,7 +904,7 @@
         self.closeTokenModal();
         self.loadReportTokens();
 
-        var shareUrl = window.location.origin + "/report.html?token=" + encodeURIComponent(res.token);
+        var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(res.token);
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(shareUrl).then(function () {
             alert("Secure Sponsor Report Link created and copied to clipboard!\n\nSponsor: " + client + "\nLink: " + shareUrl);
@@ -935,7 +935,7 @@
       });
 
       if (activeTok) {
-        var shareUrl = window.location.origin + "/report.html?token=" + encodeURIComponent(activeTok.token);
+        var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(activeTok.token);
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(shareUrl).then(function () {
             alert("Sponsor Report Link copied to clipboard:\n\nSponsor: " + selected + "\nLink: " + shareUrl);
@@ -1018,7 +1018,7 @@
 
         var expiryText = t.expires_at ? new Date(t.expires_at).toLocaleDateString() : "Permanent";
         var createdText = t.created_at ? new Date(t.created_at).toLocaleDateString() : "—";
-        var shareUrl = window.location.origin + "/report.html?token=" + encodeURIComponent(t.token);
+        var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(t.token);
         var tokenShort = t.token.length > 18 ? t.token.slice(0, 10) + "…" + t.token.slice(-6) : t.token;
 
         tr.innerHTML =
