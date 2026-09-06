@@ -9,6 +9,7 @@
   var LS_KEYS = {
     ADS: "sharodiya_ads_v1",
     ANALYTICS: "sharodiya_analytics_v1",
+    AD_REQUESTS: "sharodiya_ad_requests_v1",
     SB_URL: "sharodiya_sb_url",
     SB_KEY: "sharodiya_sb_key",
     ADMIN_AUTH: "sharodiya_admin_auth"
@@ -431,6 +432,149 @@
       overallCtr: overallCtr,
       adReports: adReports
     };
+  };
+
+  /* ---------------------------------------------------- Ad Submission Leads */
+
+  var PLANS_CONFIG = {
+    basic: { id: "basic", name: "Basic Plan", price: 49, days: 1 },
+    standard: { id: "standard", name: "Standard Plan", price: 139, days: 3 },
+    premium: { id: "premium", name: "Premium Plan", price: 499, days: 6 }
+  };
+
+  AdsService.prototype.getPlans = function () {
+    return PLANS_CONFIG;
+  };
+
+  AdsService.prototype._getLocalAdRequests = function () {
+    try {
+      var raw = localStorage.getItem(LS_KEYS.AD_REQUESTS);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
+  AdsService.prototype._saveLocalAdRequests = function (list) {
+    try {
+      localStorage.setItem(LS_KEYS.AD_REQUESTS, JSON.stringify(list));
+    } catch (e) {
+      console.warn("[AdsService] Error saving local ad requests:", e);
+    }
+  };
+
+  AdsService.prototype.submitAdRequest = async function (formData) {
+    var plan = PLANS_CONFIG[formData.plan_id] || PLANS_CONFIG.basic;
+    var payload = {
+      name: (formData.name || "").trim(),
+      contact: (formData.contact || "").trim(),
+      category: (formData.category || "").trim(),
+      description: (formData.description || (formData.category ? formData.category + " advertisement by " + formData.name : "")).trim(),
+      plan_id: plan.id,
+      plan_name: plan.name,
+      price_inr: plan.price,
+      duration_days: plan.days,
+      destination_url: (formData.destination_url || "").trim(),
+      message: (formData.message || "").trim(),
+      status: "pending",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // 1. Try serverless endpoint first
+    try {
+      var endpoint = (typeof window !== "undefined" && window.location && window.location.origin)
+        ? window.location.origin + "/api/submit-ad"
+        : "/api/submit-ad";
+      var res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        var json = await res.json();
+        return { success: true, message: json.message || "Request submitted successfully!" };
+      }
+    } catch (apiErr) {
+      console.warn("[AdsService] /api/submit-ad unreachable, using direct Supabase/local fallback:", apiErr);
+    }
+
+    // 2. Direct Supabase insert fallback (protected by RLS "Public can submit ad requests")
+    if (this.supabase) {
+      try {
+        var sbRes = await this.supabase.from("ad_requests").insert([payload]);
+        if (!sbRes.error) {
+          return { success: true, message: "Thank you! Your advertisement request has been received. We will contact you shortly." };
+        }
+        console.warn("[AdsService] Supabase ad_requests insert error:", sbRes.error);
+      } catch (sbErr) {
+        console.warn("[AdsService] Supabase ad_requests exception:", sbErr);
+      }
+    }
+
+    // 3. Local storage fallback
+    payload.id = "req-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    var list = this._getLocalAdRequests();
+    list.unshift(payload);
+    this._saveLocalAdRequests(list);
+    return { success: true, message: "Thank you! Your advertisement request has been received. We will contact you shortly." };
+  };
+
+  AdsService.prototype.fetchAdRequests = async function () {
+    if (this.supabase) {
+      try {
+        var res = await this.supabase
+          .from("ad_requests")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!res.error && Array.isArray(res.data)) {
+          return res.data;
+        }
+        console.warn("[AdsService] fetchAdRequests error:", res.error);
+      } catch (err) {
+        console.warn("[AdsService] fetchAdRequests exception:", err);
+      }
+    }
+    return this._getLocalAdRequests();
+  };
+
+  AdsService.prototype.updateAdRequestStatus = async function (id, status) {
+    var nowIso = new Date().toISOString();
+    if (this.supabase) {
+      try {
+        var res = await this.supabase
+          .from("ad_requests")
+          .update({ status: status, updated_at: nowIso })
+          .eq("id", id)
+          .select();
+        if (!res.error && res.data && res.data[0]) return res.data[0];
+      } catch (err) {
+        console.warn("[AdsService] updateAdRequestStatus error:", err);
+      }
+    }
+    var list = this._getLocalAdRequests();
+    var idx = list.findIndex(function (r) { return r.id === id; });
+    if (idx !== -1) {
+      list[idx].status = status;
+      list[idx].updated_at = nowIso;
+      this._saveLocalAdRequests(list);
+      return list[idx];
+    }
+    return null;
+  };
+
+  AdsService.prototype.deleteAdRequest = async function (id) {
+    if (this.supabase) {
+      try {
+        var res = await this.supabase.from("ad_requests").delete().eq("id", id);
+        if (!res.error) return true;
+      } catch (err) {
+        console.warn("[AdsService] deleteAdRequest error:", err);
+      }
+    }
+    var list = this._getLocalAdRequests().filter(function (r) { return r.id !== id; });
+    this._saveLocalAdRequests(list);
+    return true;
   };
 
   window.AdsService = new AdsService();

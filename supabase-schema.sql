@@ -1,7 +1,7 @@
 -- ==============================================================================
--- Sharodiya (Durgapuja) — Supabase Schema for Ads & Analytics
+-- Sharodiya (Durgapuja) — Supabase Schema for Ads & Analytics & Ad Requests
 -- ==============================================================================
--- Run this SQL in your Supabase Project -> SQL Editor to initialize the tables.
+-- Run this SQL in your Supabase Project -> SQL Editor to initialize all tables.
 
 -- Enable UUID extension if not already enabled
 create extension if not exists "uuid-ossp";
@@ -49,7 +49,30 @@ create index if not exists idx_analytics_client on public.ad_analytics (client_n
 create index if not exists idx_analytics_created on public.ad_analytics (created_at desc);
 
 -- ------------------------------------------------------------------------------
--- 3. ANALYTICS SUMMARY VIEW
+-- 3. AD REQUESTS TABLE (Customer Leads from "Advertise With Us")
+-- ------------------------------------------------------------------------------
+create table if not exists public.ad_requests (
+  id uuid primary key default uuid_generate_v4(),
+  name text not null,
+  contact text not null,
+  category text not null,
+  description text not null,
+  plan_id text not null check (plan_id in ('basic', 'standard', 'premium')),
+  plan_name text not null,
+  price_inr integer not null,
+  duration_days integer not null,
+  destination_url text default '',
+  message text default '',
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'completed')),
+  created_at timestamptz default timezone('utc'::text, now()) not null,
+  updated_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+-- Index for querying pending requests
+create index if not exists idx_ad_requests_status on public.ad_requests (status, created_at desc);
+
+-- ------------------------------------------------------------------------------
+-- 4. ANALYTICS SUMMARY VIEW
 -- ------------------------------------------------------------------------------
 create or replace view public.ad_analytics_summary as
 select
@@ -78,16 +101,19 @@ left join public.ad_analytics ev on a.id = ev.ad_id
 group by a.id, a.title, a.client_name, a.is_active, a.priority, a.duration_seconds, a.start_at, a.end_at, a.created_at;
 
 -- ------------------------------------------------------------------------------
--- 4. ROW LEVEL SECURITY (RLS) POLICIES
+-- 5. ROW LEVEL SECURITY (RLS) POLICIES
 -- ------------------------------------------------------------------------------
 alter table public.ads enable row level security;
 alter table public.ad_analytics enable row level security;
+alter table public.ad_requests enable row level security;
 
 -- Drop existing policies if re-running
 drop policy if exists "Public can view active scheduled ads" on public.ads;
 drop policy if exists "Admins have full access to ads" on public.ads;
 drop policy if exists "Public can record impressions and clicks" on public.ad_analytics;
 drop policy if exists "Admins have full access to analytics" on public.ad_analytics;
+drop policy if exists "Public can submit ad requests" on public.ad_requests;
+drop policy if exists "Admins have full access to ad requests" on public.ad_requests;
 
 -- Policy: Public anon visitors can read active ads that are in their scheduled window
 create policy "Public can view active scheduled ads" on public.ads
@@ -98,7 +124,7 @@ create policy "Public can view active scheduled ads" on public.ads
     and (end_at is null or end_at >= now())
   );
 
--- Policy: Authenticated users (admin) or service role can perform full CRUD on ads
+-- Policy: Authenticated users (admin) have full CRUD on ads
 create policy "Admins have full access to ads" on public.ads
   for all
   to authenticated
@@ -117,8 +143,21 @@ create policy "Admins have full access to analytics" on public.ad_analytics
   to authenticated
   using (true);
 
+-- Policy: Public anon visitors can ONLY insert ad requests (cannot read others' contact details)
+create policy "Public can submit ad requests" on public.ad_requests
+  for insert
+  to anon, authenticated
+  with check (true);
+
+-- Policy: Authenticated admin has full access to read and manage ad requests
+create policy "Admins have full access to ad requests" on public.ad_requests
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+
 -- ------------------------------------------------------------------------------
--- 5. INITIAL SAMPLE SEED DATA (Durga Puja festive sponsors)
+-- 6. INITIAL SAMPLE SEED DATA
 -- ------------------------------------------------------------------------------
 insert into public.ads (id, title, subtitle, badge, destination_url, image_url, client_name, duration_seconds, priority, is_active)
 values

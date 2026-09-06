@@ -1,23 +1,25 @@
 /* ==========================================================================
    admin.js — Admin Controller & Client Analytics Portal Engine
-   Handles authentication, ad CRUD, priority controls, and sponsor metrics.
+   Hardened against client tampering, DOM leakage, and unauthorized access.
+   Strictly authenticated via Supabase Auth with PostgreSQL Row Level Security.
    ========================================================================== */
 
 (function () {
   "use strict";
 
-  var SESS_KEY = "sharodiya_admin_logged_in";
-  var PIN_KEY = "sharodiya_custom_admin_pin";
-  var DEFAULT_PIN = "admin123";
-
   function $(id) { return document.getElementById(id); }
 
   function AdminController() {
     this.ads = [];
+    this.requests = [];
+    this.currentUser = null;
     this.currentEditId = null;
+    this.pendingApprovalRequestId = null;
     this.activeTab = "ads";
     this.previewTimer = null;
     this.previewIndex = 0;
+    this.failedAttempts = 0;
+    this.lockoutUntil = 0;
 
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", this.init.bind(this));
@@ -26,135 +28,231 @@
     }
   }
 
-  AdminController.prototype.init = function () {
+  AdminController.prototype.init = async function () {
+    var self = this;
     this.bindAuthEvents();
     this.bindNavigation();
     this.bindAdEvents();
+    this.bindRequestEvents();
     this.bindAnalyticsEvents();
     this.bindDatabaseEvents();
 
-    // Check for client portal query param ?client=xyz
-    var urlParams = new URLSearchParams(window.location.search);
-    var clientParam = urlParams.get("client");
-
-    if (this.isAuthenticated() || clientParam) {
-      this.unlockDashboard(clientParam);
-    } else {
-      this.showAuthGate();
+    // Listen to real-time auth changes from Supabase
+    if (window.AdsService && window.AdsService.supabase) {
+      window.AdsService.supabase.auth.onAuthStateChange(function (event, session) {
+        if (event === "SIGNED_OUT" || !session) {
+          self.lockDashboard();
+        } else if (event === "SIGNED_IN" && session) {
+          self.currentUser = session.user;
+          self.unlockDashboard();
+        }
+      });
     }
+
+    // Verify session cryptographically on startup
+    await this.verifySession();
   };
 
   /* ------------------------------------------------------------- Authentication */
 
-  AdminController.prototype.isAuthenticated = function () {
-    return sessionStorage.getItem(SESS_KEY) === "1";
+  AdminController.prototype.verifySession = async function () {
+    if (!window.AdsService || !window.AdsService.supabase) {
+      this.lockDashboard();
+      return;
+    }
+
+    try {
+      var sessRes = await window.AdsService.supabase.auth.getSession();
+      if (sessRes && sessRes.data && sessRes.data.session && sessRes.data.session.user) {
+        this.currentUser = sessRes.data.session.user;
+        this.unlockDashboard();
+        return;
+      }
+    } catch (e) {
+      console.warn("[Admin] Session check error:", e);
+    }
+
+    this.lockDashboard();
   };
 
-  AdminController.prototype.showAuthGate = function () {
-    $("authGate").removeAttribute("hidden");
-    $("adminApp").setAttribute("hidden", "true");
+  AdminController.prototype.lockDashboard = function () {
+    this.currentUser = null;
+    document.body.classList.remove("is-authenticated");
+    var app = $("adminApp");
+    var gate = $("authGate");
+    if (app) {
+      app.setAttribute("hidden", "true");
+    }
+    if (gate) {
+      gate.removeAttribute("hidden");
+    }
+
+    // Clear all in-memory data to prevent memory scraping in DevTools
+    this.ads = [];
+    this.requests = [];
+    var adsBody = $("adsTableBody");
+    if (adsBody) adsBody.innerHTML = "";
+    var reqBody = $("requestsTableBody");
+    if (reqBody) reqBody.innerHTML = "";
+    var userBadge = $("adminUserBadge");
+    if (userBadge) {
+      userBadge.textContent = "";
+      userBadge.setAttribute("hidden", "true");
+    }
   };
 
-  AdminController.prototype.unlockDashboard = function (clientParam) {
-    $("authGate").setAttribute("hidden", "true");
-    $("adminApp").removeAttribute("hidden");
+  AdminController.prototype.unlockDashboard = function () {
+    document.body.classList.add("is-authenticated");
+    var app = $("adminApp");
+    var gate = $("authGate");
+    if (gate) gate.setAttribute("hidden", "true");
+    if (app) app.removeAttribute("hidden");
+
+    var userBadge = $("adminUserBadge");
+    if (userBadge && this.currentUser && this.currentUser.email) {
+      userBadge.textContent = this.currentUser.email;
+      userBadge.removeAttribute("hidden");
+    }
 
     this.updateSupabaseStatusBadge();
 
+    // Check if ?client= filter is present to view specific client's analytics
+    var urlParams = new URLSearchParams(window.location.search);
+    var clientParam = urlParams.get("client");
     if (clientParam) {
-      // Direct sponsor / client mode
+      this.clientOnlyMode = clientParam;
       this.switchTab("analytics");
-      var filterSelect = $("clientAnalyticsFilter");
-      if (filterSelect) {
-        // Will be populated and selected after analytics load
-        this.clientOnlyMode = clientParam;
-      }
     }
 
     this.loadAds();
+    this.loadAdRequests();
     this.loadAnalytics();
   };
 
   AdminController.prototype.bindAuthEvents = function () {
     var self = this;
 
-    // Switch between Admin PIN & Supabase Auth tabs
-    $("tabAdminPin").addEventListener("click", function () {
-      this.classList.add("is-active");
-      $("tabSupabaseAuth").classList.remove("is-active");
-      $("panelAdminPin").removeAttribute("hidden");
-      $("panelSupabaseAuth").setAttribute("hidden", "true");
-    });
-
-    $("tabSupabaseAuth").addEventListener("click", function () {
-      this.classList.add("is-active");
-      $("tabAdminPin").classList.remove("is-active");
-      $("panelSupabaseAuth").removeAttribute("hidden");
-      $("panelAdminPin").setAttribute("hidden", "true");
-    });
+    // Show / Hide Password toggle
+    var togglePassBtn = $("btnTogglePass");
+    var passInput = $("sbPassInput");
+    if (togglePassBtn && passInput) {
+      togglePassBtn.addEventListener("click", function () {
+        var isPass = passInput.type === "password";
+        passInput.type = isPass ? "text" : "password";
+        var eye = $("eyeIcon");
+        if (eye) {
+          eye.innerHTML = isPass
+            ? '<path d="m15 18-.722-3.25"/><path d="M2 8a10.645 10.645 0 0 0 20 0"/><path d="m20 15-1.726-2.05"/><path d="m4 15 1.726-2.05"/><path d="m9 18 .722-3.25"/>'
+            : '<path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>';
+        }
+      });
+    }
 
     // Form submission
-    $("authForm").addEventListener("submit", async function (e) {
-      e.preventDefault();
-      var errEl = $("authError");
-      errEl.setAttribute("hidden", "true");
+    var authForm = $("authForm");
+    if (authForm) {
+      authForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        self.handleLogin();
+      });
+    }
 
-      var isPinTab = $("tabAdminPin").classList.contains("is-active");
-
-      if (isPinTab) {
-        var pin = ($("adminPinInput").value || "").trim();
-        var validPin = localStorage.getItem(PIN_KEY) || DEFAULT_PIN;
-
-        if (pin === validPin) {
-          sessionStorage.setItem(SESS_KEY, "1");
-          self.unlockDashboard();
-        } else {
-          errEl.textContent = "Invalid Admin Passkey. Please try again.";
-          errEl.removeAttribute("hidden");
-        }
-      } else {
-        // Supabase Email / Password login
-        var email = ($("sbEmailInput").value || "").trim();
-        var pass = ($("sbPassInput").value || "").trim();
-
-        if (!email || !pass) {
-          errEl.textContent = "Please enter both email and password.";
-          errEl.removeAttribute("hidden");
-          return;
-        }
-
+    // Logout
+    var logoutBtn = $("btnLogout");
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", async function () {
         if (window.AdsService && window.AdsService.supabase) {
           try {
-            var res = await window.AdsService.supabase.auth.signInWithPassword({
-              email: email,
-              password: pass
-            });
-            if (res.error) {
-              errEl.textContent = res.error.message;
-              errEl.removeAttribute("hidden");
-              return;
-            }
-            sessionStorage.setItem(SESS_KEY, "1");
-            self.unlockDashboard();
-          } catch (err) {
-            errEl.textContent = "Authentication failed: " + err.message;
+            await window.AdsService.supabase.auth.signOut();
+          } catch (e) {}
+        }
+        self.lockDashboard();
+        window.location.reload();
+      });
+    }
+  };
+
+  AdminController.prototype.handleLogin = async function () {
+    var errEl = $("authError");
+    var submitBtn = $("btnAuthSubmit");
+    var submitText = $("authSubmitText");
+
+    if (errEl) errEl.setAttribute("hidden", "true");
+
+    // Check brute force lockout
+    if (this.lockoutUntil && Date.now() < this.lockoutUntil) {
+      var remainingSec = Math.ceil((this.lockoutUntil - Date.now()) / 1000);
+      if (errEl) {
+        errEl.textContent = "Security lockout active. Too many failed attempts. Please wait " + remainingSec + " seconds.";
+        errEl.removeAttribute("hidden");
+      }
+      return;
+    }
+
+    var email = ($("sbEmailInput").value || "").trim();
+    var pass = ($("sbPassInput").value || "").trim();
+
+    if (!email || !pass) {
+      if (errEl) {
+        errEl.textContent = "Please enter both admin email and password.";
+        errEl.removeAttribute("hidden");
+      }
+      return;
+    }
+
+    if (!window.AdsService || !window.AdsService.supabase) {
+      if (errEl) {
+        errEl.textContent = "Supabase service is initializing. Please try again in a moment.";
+        errEl.removeAttribute("hidden");
+      }
+      return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      if (submitText) submitText.textContent = "Verifying Credentials...";
+    }
+
+    try {
+      var res = await window.AdsService.supabase.auth.signInWithPassword({
+        email: email,
+        password: pass
+      });
+
+      if (res.error) {
+        this.failedAttempts++;
+        if (this.failedAttempts >= 5) {
+          this.lockoutUntil = Date.now() + 30000;
+          if (errEl) {
+            errEl.textContent = "Too many failed login attempts. Account access is temporarily locked for 30 seconds.";
             errEl.removeAttribute("hidden");
           }
         } else {
-          errEl.textContent = "Supabase is not connected yet. Please login with the Admin Passkey.";
-          errEl.removeAttribute("hidden");
+          if (errEl) {
+            errEl.textContent = res.error.message || "Invalid email or password.";
+            errEl.removeAttribute("hidden");
+          }
         }
+        return;
       }
-    });
 
-    // Logout
-    $("btnLogout").addEventListener("click", function () {
-      sessionStorage.removeItem(SESS_KEY);
-      if (window.AdsService && window.AdsService.supabase) {
-        window.AdsService.supabase.auth.signOut().catch(function () {});
+      // Successful login
+      this.failedAttempts = 0;
+      this.lockoutUntil = 0;
+      this.currentUser = res.data && res.data.user;
+      this.unlockDashboard();
+
+    } catch (err) {
+      if (errEl) {
+        errEl.textContent = "Authentication exception: " + err.message;
+        errEl.removeAttribute("hidden");
       }
-      location.href = "/admin";
-    });
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (submitText) submitText.textContent = "Sign In to Dashboard";
+      }
+    }
   };
 
   /* ----------------------------------------------------------------- Navigation */
@@ -183,6 +281,8 @@
 
     if (tabId === "ads") {
       this.loadAds();
+    } else if (tabId === "requests") {
+      this.loadAdRequests();
     } else if (tabId === "analytics") {
       this.loadAnalytics();
     } else if (tabId === "database") {
@@ -506,9 +606,14 @@
           await window.AdsService.updateAd(self.currentEditId, adData);
         } else {
           await window.AdsService.createAd(adData);
+          if (self.pendingApprovalRequestId) {
+            await window.AdsService.updateAdRequestStatus(self.pendingApprovalRequestId, "approved");
+            self.pendingApprovalRequestId = null;
+          }
         }
         self.closeAdModal();
         self.loadAds();
+        self.loadAdRequests();
       } catch (err) {
         errEl.textContent = "Error saving advertisement: " + err.message;
         errEl.removeAttribute("hidden");
@@ -541,6 +646,210 @@
   AdminController.prototype.closeAdModal = function () {
     $("adModal").setAttribute("hidden", "true");
     this.currentEditId = null;
+    this.pendingApprovalRequestId = null;
+  };
+
+  /* --------------------------------------------------------- Ad Requests (Leads) */
+
+  AdminController.prototype.bindRequestEvents = function () {
+    var self = this;
+
+    var searchInput = $("reqSearchInput");
+    if (searchInput) {
+      searchInput.addEventListener("input", function () {
+        self.renderRequestsTable();
+      });
+    }
+
+    var statusFilter = $("reqStatusFilter");
+    if (statusFilter) {
+      statusFilter.addEventListener("change", function () {
+        self.renderRequestsTable();
+      });
+    }
+
+    var refreshBtn = $("btnRefreshRequests");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", function () {
+        self.loadAdRequests();
+      });
+    }
+  };
+
+  AdminController.prototype.loadAdRequests = async function () {
+    var tbody = $("requestsTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7" class="table-empty">Loading advertisement requests...</td></tr>';
+
+    try {
+      this.requests = await window.AdsService.fetchAdRequests();
+      this.renderRequestsTable();
+
+      // Update pending badge
+      var pendingCount = (this.requests || []).filter(function (r) {
+        return (r.status || "pending").toLowerCase() === "pending";
+      }).length;
+
+      var badge = $("pendingRequestsBadge");
+      if (badge) {
+        badge.textContent = pendingCount + " New";
+        if (pendingCount > 0) badge.removeAttribute("hidden");
+        else badge.setAttribute("hidden", "true");
+      }
+
+      var countEl = $("requestsCountBadge");
+      if (countEl) {
+        countEl.textContent = this.requests.length + " Request" + (this.requests.length === 1 ? "" : "s");
+      }
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="7" class="table-empty" style="color:#B91C1C;">Error loading requests: ' + err.message + '</td></tr>';
+    }
+  };
+
+  AdminController.prototype.renderRequestsTable = function () {
+    var self = this;
+    var tbody = $("requestsTableBody");
+    if (!tbody) return;
+
+    var query = ($("reqSearchInput") ? $("reqSearchInput").value : "").toLowerCase().trim();
+    var filter = $("reqStatusFilter") ? $("reqStatusFilter").value : "all";
+
+    var filtered = (this.requests || []).filter(function (req) {
+      var st = (req.status || "pending").toLowerCase();
+      if (filter !== "all" && st !== filter) return false;
+
+      if (query) {
+        var matchName = (req.name || "").toLowerCase().includes(query);
+        var matchContact = (req.contact || "").toLowerCase().includes(query);
+        var matchCat = (req.category || "").toLowerCase().includes(query);
+        var matchDesc = (req.description || "").toLowerCase().includes(query);
+        if (!matchName && !matchContact && !matchCat && !matchDesc) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="table-empty">No advertisement requests found matching your filters.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = "";
+
+    filtered.forEach(function (req) {
+      var tr = document.createElement("tr");
+
+      // Date / Time
+      var tdDate = document.createElement("td");
+      var d = req.created_at ? new Date(req.created_at) : new Date();
+      tdDate.innerHTML = '<span style="font-size:12px;font-weight:600;">' + d.toLocaleDateString() + '</span>' +
+        '<div style="font-size:11px;color:#64748B;">' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</div>';
+      tr.appendChild(tdDate);
+
+      // Applicant & Contact
+      var tdApplicant = document.createElement("td");
+      tdApplicant.innerHTML = '<b>' + escapeHtml(req.name) + '</b>' +
+        '<div style="font-size:11.5px;color:#2563EB;margin-top:2px;"><b>' + escapeHtml(req.contact) + '</b></div>';
+      tr.appendChild(tdApplicant);
+
+      // Category
+      var tdCat = document.createElement("td");
+      tdCat.innerHTML = '<span style="background:#F1F5F9;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:700;color:#0F172A;">' + escapeHtml(req.category) + '</span>';
+      tr.appendChild(tdCat);
+
+      // Selected Plan
+      var tdPlan = document.createElement("td");
+      var price = req.price_inr || (req.plan_id === "premium" ? 499 : req.plan_id === "standard" ? 139 : 49);
+      var days = req.duration_days || (req.plan_id === "premium" ? 6 : req.plan_id === "standard" ? 3 : 1);
+      tdPlan.innerHTML = '<b style="color:#EF4444;">₹' + price + '</b>' +
+        '<div style="font-size:11px;color:#64748B;">' + days + ' Day' + (days > 1 ? 's' : '') + ' (' + escapeHtml(req.plan_name || req.plan_id) + ')</div>';
+      tr.appendChild(tdPlan);
+
+      // Description & Link
+      var tdDesc = document.createElement("td");
+      tdDesc.style.maxWidth = "220px";
+      tdDesc.innerHTML = '<div style="font-weight:600;line-height:1.3;">' + escapeHtml(req.description) + '</div>' +
+        (req.destination_url ? '<a href="' + escapeHtml(req.destination_url) + '" target="_blank" style="font-size:11px;color:#3B82F6;text-decoration:none;" title="' + escapeHtml(req.destination_url) + '">↗ ' + escapeHtml(req.destination_url) + '</a>' : '') +
+        (req.message ? '<div style="font-size:11px;color:#64748B;font-style:italic;margin-top:2px;">Note: ' + escapeHtml(req.message) + '</div>' : '');
+      tr.appendChild(tdDesc);
+
+      // Status
+      var tdStatus = document.createElement("td");
+      var stClass = "is-disabled";
+      var stLabel = (req.status || "pending").toUpperCase();
+      if (req.status === "approved") stClass = "is-active";
+      else if (req.status === "rejected") stClass = "is-expired";
+      else stClass = "is-disabled";
+
+      tdStatus.innerHTML = '<span class="status-pill ' + stClass + '">' + stLabel + '</span>';
+      tr.appendChild(tdStatus);
+
+      // Actions
+      var tdActions = document.createElement("td");
+      tdActions.style.textAlign = "right";
+      var actWrap = document.createElement("div");
+      actWrap.className = "table-actions";
+
+      // "Approve & Launch as Ad" button
+      var appBtn = document.createElement("button");
+      appBtn.className = "btn btn-primary btn-sm";
+      appBtn.textContent = "Approve & Launch ↗";
+      appBtn.title = "Approve request and configure live Top Island Ad";
+      appBtn.addEventListener("click", function () {
+        self.approveRequestAsAd(req);
+      });
+      actWrap.appendChild(appBtn);
+
+      // Quick reject button
+      if (req.status !== "rejected") {
+        var rejBtn = document.createElement("button");
+        rejBtn.className = "btn btn-outline btn-sm";
+        rejBtn.textContent = "Reject";
+        rejBtn.addEventListener("click", async function () {
+          await window.AdsService.updateAdRequestStatus(req.id, "rejected");
+          self.loadAdRequests();
+        });
+        actWrap.appendChild(rejBtn);
+      }
+
+      // Delete button
+      var delBtn = document.createElement("button");
+      delBtn.className = "btn btn-danger btn-sm";
+      delBtn.textContent = "×";
+      delBtn.title = "Delete Request";
+      delBtn.addEventListener("click", async function () {
+        if (confirm("Delete request from " + req.name + "?")) {
+          await window.AdsService.deleteAdRequest(req.id);
+          self.loadAdRequests();
+        }
+      });
+      actWrap.appendChild(delBtn);
+
+      tdActions.appendChild(actWrap);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    });
+  };
+
+  AdminController.prototype.approveRequestAsAd = function (req) {
+    this.pendingApprovalRequestId = req.id;
+    this.openAdModal(null);
+
+    // Pre-populate fields from the request
+    $("adInputTitle").value = req.description || "";
+    $("adInputClient").value = req.name || "";
+    $("adInputClientEmail").value = req.contact || "";
+    $("adInputBadge").value = (req.category || "SPONSORED").toUpperCase();
+    $("adInputDestUrl").value = req.destination_url || "";
+    $("adInputDuration").value = 7;
+    $("adInputPriority").value = 10;
+
+    // Pre-set end schedule according to selected plan
+    var days = req.duration_days || (req.plan_id === "premium" ? 6 : req.plan_id === "standard" ? 3 : 1);
+    var endDate = new Date(Date.now() + days * 86400000);
+    $("adInputStart").value = formatDatetimeLocal(new Date().toISOString());
+    $("adInputEnd").value = formatDatetimeLocal(endDate.toISOString());
+    $("adInputIsActive").checked = true;
   };
 
   /* ------------------------------------------------------------- Client Analytics */

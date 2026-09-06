@@ -30,6 +30,7 @@
 
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/ad-island.css">
+<link rel="stylesheet" href="css/advertise.css">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪩</text></svg>">
 </head>
 <body>
@@ -64,6 +65,9 @@
 
 <!-- ================= PLAYER ================= -->
 <footer class="player" id="player">
+  <!-- In-Player "Advertise With Us" Banner Mount -->
+  <div id="playerAdMount" class="player-ad-mount"></div>
+
   <canvas id="viz" class="viz" aria-hidden="true"></canvas>
 
   <div class="seek-wrap">
@@ -149,5 +153,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/ads-service.js"></script>
 <script src="js/ad-island.js"></script>
+<script src="js/advertise.js"></script>
 </body>
 </html>
