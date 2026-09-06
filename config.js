@@ -93,5 +93,11 @@ window.SHARODIYA_CONFIG = {
   volume: 80,          // 0-100
   sceneSeconds: 18,    // how long each poster is held
   fadeSeconds: 1.1,    // crossfade between posters
-  ensembleTempo: 96    // BPM of the fallback dhak ensemble
+  ensembleTempo: 96,   // BPM of the fallback dhak ensemble
+
+  // Supabase Ads & Client Analytics (can also be configured via /admin)
+  supabase: {
+    url: "",
+    anonKey: ""
+  }
 };
