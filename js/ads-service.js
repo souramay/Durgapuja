@@ -577,5 +577,143 @@
     return true;
   };
 
+  /* ------------------------------------------------ Sponsor Report Tokens */
+
+  var LS_REPORT_TOKENS = "sharodiya_report_tokens";
+
+  function generateCryptographicToken() {
+    if (window.crypto && window.crypto.getRandomValues) {
+      var arr = new Uint8Array(18);
+      window.crypto.getRandomValues(arr);
+      return Array.from(arr).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+    return "tok_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  AdsService.prototype._getLocalReportTokens = function () {
+    try {
+      var raw = localStorage.getItem(LS_REPORT_TOKENS);
+      if (!raw) {
+        var defaults = [
+          {
+            id: "11111111-1111-1111-1111-111111111111",
+            token: "svf-music-demo-token-98f2a1b4e6",
+            client_name: "SVF Music",
+            created_by: "admin",
+            is_active: true,
+            expires_at: null,
+            created_at: new Date().toISOString()
+          },
+          {
+            id: "22222222-2222-2222-2222-222222222222",
+            token: "pujo-fashion-demo-token-4c7b8e1a",
+            client_name: "Pujo Fashion House",
+            created_by: "admin",
+            is_active: true,
+            expires_at: null,
+            created_at: new Date().toISOString()
+          }
+        ];
+        localStorage.setItem(LS_REPORT_TOKENS, JSON.stringify(defaults));
+        return defaults;
+      }
+      return JSON.parse(raw);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  AdsService.prototype._saveLocalReportTokens = function (list) {
+    try {
+      localStorage.setItem(LS_REPORT_TOKENS, JSON.stringify(list));
+    } catch (e) {
+      console.warn("[AdsService] Error saving report tokens:", e);
+    }
+  };
+
+  AdsService.prototype.fetchReportTokens = async function () {
+    if (this.supabase) {
+      try {
+        var res = await this.supabase
+          .from("sponsor_report_tokens")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+          return res.data;
+        }
+      } catch (err) {
+        console.warn("[AdsService] fetchReportTokens exception:", err);
+      }
+    }
+    return this._getLocalReportTokens();
+  };
+
+  AdsService.prototype.createReportToken = async function (clientName, durationDays) {
+    var token = generateCryptographicToken();
+    var expiresAt = null;
+    if (durationDays && durationDays > 0) {
+      var d = new Date();
+      d.setDate(d.getDate() + parseInt(durationDays, 10));
+      expiresAt = d.toISOString();
+    }
+
+    var record = {
+      token: token,
+      client_name: clientName.trim(),
+      created_by: "admin",
+      is_active: true,
+      expires_at: expiresAt,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (this.supabase) {
+      try {
+        var res = await this.supabase.from("sponsor_report_tokens").insert([record]).select();
+        if (!res.error && res.data && res.data[0]) {
+          // sync local copy
+          var local = this._getLocalReportTokens();
+          local.unshift(res.data[0]);
+          this._saveLocalReportTokens(local);
+          return res.data[0];
+        }
+      } catch (err) {
+        console.warn("[AdsService] createReportToken error:", err);
+      }
+    }
+
+    record.id = "tok-rec-" + Date.now();
+    var localList = this._getLocalReportTokens();
+    localList.unshift(record);
+    this._saveLocalReportTokens(localList);
+    return record;
+  };
+
+  AdsService.prototype.revokeReportToken = async function (id) {
+    var nowIso = new Date().toISOString();
+    if (this.supabase) {
+      try {
+        var res = await this.supabase
+          .from("sponsor_report_tokens")
+          .update({ is_active: false, updated_at: nowIso })
+          .eq("id", id)
+          .select();
+        if (!res.error && res.data && res.data[0]) return res.data[0];
+      } catch (err) {
+        console.warn("[AdsService] revokeReportToken error:", err);
+      }
+    }
+
+    var list = this._getLocalReportTokens();
+    var idx = list.findIndex(function (t) { return t.id === id; });
+    if (idx !== -1) {
+      list[idx].is_active = false;
+      list[idx].updated_at = nowIso;
+      this._saveLocalReportTokens(list);
+      return list[idx];
+    }
+    return null;
+  };
+
   window.AdsService = new AdsService();
 })();

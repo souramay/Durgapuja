@@ -15,7 +15,6 @@
     this.remainingMs = 0;
     this.currentTotalMs = 7000;
     this.isPaused = false;
-    this.isDismissed = false;
 
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", this.init.bind(this));
@@ -47,7 +46,7 @@
       var activeAds = await window.AdsService.fetchActiveAds();
       this.ads = Array.isArray(activeAds) ? activeAds : [];
 
-      if (this.isDismissed || this.ads.length === 0) {
+      if (this.ads.length === 0) {
         this.hide();
         return;
       }
@@ -169,24 +168,12 @@
       actionsEl.appendChild(dotsEl);
     }
 
-    var ctaEl = document.createElement("div");
-    ctaEl.className = "ad-island-cta";
-    ctaEl.innerHTML = "↗";
-    ctaEl.title = "Open link";
-    actionsEl.appendChild(ctaEl);
-
-    var closeBtn = document.createElement("button");
-    closeBtn.className = "ad-island-close";
-    closeBtn.type = "button";
-    closeBtn.innerHTML = "×";
-    closeBtn.title = "Dismiss";
-    closeBtn.setAttribute("aria-label", "Dismiss advertisement");
-    closeBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      self.isDismissed = true;
-      self.hide();
-    });
-    actionsEl.appendChild(closeBtn);
+    var ctaBtn = document.createElement("button");
+    ctaBtn.className = "ad-island-cta-btn";
+    ctaBtn.type = "button";
+    ctaBtn.setAttribute("aria-label", "Visit sponsor: " + (ad.client_name || ad.title || ""));
+    ctaBtn.innerHTML = '<span>Visit Sponsor</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>';
+    actionsEl.appendChild(ctaBtn);
 
     island.appendChild(actionsEl);
 
@@ -202,8 +189,7 @@
     }
 
     // Click handler for destination URL
-    island.addEventListener("click", function (e) {
-      if (e.target === closeBtn || closeBtn.contains(e.target)) return;
+    island.addEventListener("click", function () {
       if (window.AdsService) {
         window.AdsService.recordClick(ad);
       }

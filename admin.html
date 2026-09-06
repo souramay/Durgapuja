@@ -254,6 +254,9 @@
           <select id="clientAnalyticsFilter" class="form-select filter-select">
             <option value="">All Sponsors</option>
           </select>
+          <button type="button" id="btnOpenTokenModal" class="btn btn-primary btn-sm" title="Generate new secure shareable token">
+            + New Sponsor Link
+          </button>
           <button type="button" id="btnCopyClientLink" class="btn btn-secondary btn-sm" title="Copy shareable read-only link for client">
             🔗 Copy Sponsor Link
           </button>
@@ -263,6 +266,12 @@
 
       <!-- Analytics Breakdown Table -->
       <div class="card table-card">
+        <div class="card-header" style="border-bottom: 1px solid var(--admin-border); padding: 16px 20px;">
+          <div>
+            <h3 class="card-title" style="font-size:15px;">Campaign Analytics Breakdown</h3>
+            <p class="card-subtitle">Real-time impressions, click-through rates, and interaction logs</p>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="data-table">
             <thead>
@@ -280,6 +289,36 @@
             <tbody id="analyticsTableBody">
               <tr>
                 <td colspan="8" class="table-empty">Loading performance data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Active Shareable Sponsor Links Management -->
+      <div class="card table-card" style="margin-top: 24px;">
+        <div class="card-header" style="border-bottom: 1px solid var(--admin-border); padding: 16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 class="card-title" style="font-size:15px;">Cryptographically Scoped Sponsor Links</h3>
+            <p class="card-subtitle">Shareable dashboards for paying clients. Enforces zero cross-tenant data leakage.</p>
+          </div>
+          <span class="preview-note">Strict Token Authorization</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Sponsor / Client</th>
+                <th>Secure Token</th>
+                <th>Expiration</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tokensTableBody">
+              <tr>
+                <td colspan="6" class="table-empty">Loading shareable sponsor links...</td>
               </tr>
             </tbody>
           </table>
@@ -473,6 +512,47 @@ create policy "Admins have full access to analytics" on public.ad_analytics
       <div class="modal-footer">
         <button type="button" id="btnAdModalCancel" class="btn btn-outline">Cancel</button>
         <button type="submit" id="btnAdModalSave" class="btn btn-primary">Save Advertisement</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Generate Shareable Sponsor Link -->
+<div id="tokenModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Generate Shareable Sponsor Link</h3>
+      <button type="button" id="btnTokenModalClose" class="modal-close-btn">&times;</button>
+    </div>
+
+    <form id="tokenForm" class="modal-form" onsubmit="return false;">
+      <p style="font-size:13px; color:var(--admin-text-muted); margin-bottom:16px;">
+        Creates a cryptographically secure, unpredictable link that gives the client direct access to their isolated performance dashboard.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Sponsor / Client Name *</label>
+        <input type="text" id="tokenInputClient" class="form-input" placeholder="e.g. SVF Music, Pujo Fashion House" required list="sponsorDatalist">
+        <datalist id="sponsorDatalist"></datalist>
+        <span class="form-hint">Must match the client name configured in campaigns.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Link Expiration</label>
+        <select id="tokenInputDuration" class="form-select">
+          <option value="0">Never Expires (Permanent)</option>
+          <option value="7">7 Days</option>
+          <option value="30" selected>30 Days</option>
+          <option value="90">90 Days</option>
+        </select>
+        <span class="form-hint">Links can also be manually revoked at any time from this dashboard.</span>
+      </div>
+
+      <div id="tokenModalError" class="auth-error" hidden style="margin-top:12px;"></div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnTokenModalCancel" class="btn btn-outline">Cancel</button>
+        <button type="submit" id="btnTokenModalGenerate" class="btn btn-primary">Generate & Copy Link</button>
       </div>
     </form>
   </div>

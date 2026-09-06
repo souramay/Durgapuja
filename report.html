@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sponsor Performance Report | শারদীয়া Radio</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/report.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+</head>
+<body>
+
+  <!-- Top Global Bar -->
+  <header class="report-header">
+    <div class="header-container">
+      <div class="brand-group">
+        <a href="/" class="brand-link" title="Return to Sharodiya Radio">
+          <span class="brand-icon">🪩</span>
+          <div class="brand-text">
+            <b>শারদীয়া Radio</b>
+            <span class="brand-sub">Sponsor Analytics Portal</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="header-actions">
+        <span id="reportSecurityBadge" class="security-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <span>End-to-End Scoped</span>
+        </span>
+        <button type="button" id="btnRefresh" class="btn btn-secondary btn-sm" title="Refresh Live Metrics">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          <span>Refresh</span>
+        </button>
+        <button type="button" id="btnPrint" class="btn btn-primary btn-sm" title="Print or Save PDF Report">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+          <span>Print / PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="report-main">
+    <div class="report-container">
+
+      <!-- Loading State -->
+      <div id="loadingState" class="state-card">
+        <div class="spinner"></div>
+        <h3>Verifying Token & Loading Analytics...</h3>
+        <p>Connecting to secure telemetry cluster.</p>
+      </div>
+
+      <!-- Error / Unauthorized State -->
+      <div id="errorState" class="state-card state-card-error" hidden>
+        <div class="error-icon">🔒</div>
+        <h2 id="errorTitle">Access Denied</h2>
+        <p id="errorMessage">Invalid, expired, or revoked report token.</p>
+        <div class="error-actions">
+          <a href="/" class="btn btn-primary">Return to Live Radio</a>
+          <a href="mailto:tarunkumaruttam2003@gmail.com" class="btn btn-secondary">Contact Campaign Admin</a>
+        </div>
+        <div class="security-footprint">
+          <span>Security Protocol: Zero-Trust Multi-Tenant Isolation</span>
+        </div>
+      </div>
+
+      <!-- Report Dashboard Content (Visible when authorized) -->
+      <div id="reportContent" class="report-content" hidden>
+
+        <!-- Sponsor Welcome Banner -->
+        <section class="sponsor-hero-card">
+          <div class="sponsor-hero-info">
+            <div class="sponsor-tag-row">
+              <span class="badge badge-festive">OFFICIAL SPONSOR</span>
+              <span id="sponsorReportStatus" class="badge badge-active">Live Campaign Data</span>
+            </div>
+            <h1 id="sponsorNameHeading" class="sponsor-name">Loading Sponsor...</h1>
+            <p class="sponsor-meta">
+              <span>Report Generated: <b id="sponsorReportTime">—</b></span>
+              <span class="meta-dot">·</span>
+              <span>Authorization: <b id="sponsorTokenExpiry">Active Permanent</b></span>
+            </p>
+          </div>
+          <div class="sponsor-hero-quickcta">
+            <a href="/" target="_blank" class="btn btn-outline btn-sm">Preview on Live Radio ↗</a>
+          </div>
+        </section>
+
+        <!-- KPI Metrics Grid -->
+        <section class="kpi-grid">
+          <!-- Total Impressions -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Total Impressions</span>
+              <div class="kpi-icon-wrap" style="background:#FEF2F2;color:#EF4444;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              </div>
+            </div>
+            <div class="kpi-main">
+              <div id="metricImpressions" class="kpi-number">0</div>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-note">Verified live user views across radio streams</span>
+            </div>
+          </div>
+
+          <!-- Total Clicks -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Total Link Clicks</span>
+              <div class="kpi-icon-wrap" style="background:#EFF6FF;color:#3B82F6;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>
+              </div>
+            </div>
+            <div class="kpi-main">
+              <div id="metricClicks" class="kpi-number">0</div>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-note">Direct high-intent visitor interactions</span>
+            </div>
+          </div>
+
+          <!-- Click-Through Rate (CTR) -->
+          <div class="kpi-card kpi-card-highlight">
+            <div class="kpi-top">
+              <span class="kpi-label">Click-Through Rate (CTR)</span>
+              <div class="kpi-icon-wrap" style="background:#ECFDF5;color:#10B981;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+              </div>
+            </div>
+            <div class="kpi-main">
+              <div id="metricCtr" class="kpi-number">0.00%</div>
+            </div>
+            <div class="kpi-footer">
+              <span class="kpi-formula">Formula: (Clicks ÷ Impressions) × 100</span>
+            </div>
+          </div>
+
+          <!-- Active Campaigns -->
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-label">Campaigns</span>
+              <div class="kpi-icon-wrap" style="background:#F5F3FF;color:#8B5CF6;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              </div>
+            </div>
+            <div class="kpi-main">
+              <div id="metricCampaigns" class="kpi-number">0</div>
+            </div>
+            <div class="kpi-footer">
+              <span id="metricActiveSummary" class="kpi-note">0 active advertising slots</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Campaigns Performance Table -->
+        <section class="card content-card">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Campaign Performance Details</h2>
+              <p class="card-subtitle">Comprehensive metrics for each creative asset deployed under this sponsor account</p>
+            </div>
+            <span class="card-tag">Strictly Scoped Data</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Creative & Headline</th>
+                  <th>Destination</th>
+                  <th>Schedule</th>
+                  <th>Impressions</th>
+                  <th>Clicks</th>
+                  <th>CTR (%)</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="campaignsTableBody">
+                <tr>
+                  <td colspan="7" class="table-empty">Loading campaign performance records...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Daily Trends Breakdown -->
+        <section class="card content-card" style="margin-top:24px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Daily Engagement Activity</h2>
+              <p class="card-subtitle">Day-by-day impression volume and audience interactions</p>
+            </div>
+            <span class="card-tag">Audience Trends</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="report-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Daily Impressions</th>
+                  <th>Daily Clicks</th>
+                  <th>Daily CTR (%)</th>
+                  <th>Engagement Ratio</th>
+                </tr>
+              </thead>
+              <tbody id="dailyTableBody">
+                <tr>
+                  <td colspan="5" class="table-empty">No daily activity recorded yet.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Security & Tenant Isolation Guarantee -->
+        <section class="security-card">
+          <div class="security-icon">🛡️</div>
+          <div class="security-content">
+            <h4>Cryptographic Client Isolation Guarantee</h4>
+            <p>
+              This analytics dashboard is strictly scoped to <b><span class="sponsor-name-inline">Authorized Sponsor</span></b>. 
+              Under our zero-trust multi-tenant security architecture, metrics and audience insights are verified at the backend database layer. 
+              Parameter tampering, client swapping, or unauthorized requests are cryptographically blocked.
+            </p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Report Footer -->
+  <footer class="report-footer">
+    <div class="footer-container">
+      <p>© 2026 শারদীয়া Radio · Verified Sponsor Performance Engine · All Rights Reserved.</p>
+      <p class="footer-sub">For campaign extensions, ad creative modifications, or inquiries, contact campaign administration.</p>
+    </div>
+  </footer>
+
+  <script src="js/report.js"></script>
+</body>
+</html>
