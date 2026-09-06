@@ -1,20 +1,55 @@
 /* ==========================================================================
    api/sponsor-report.js — Multi-Tenant Sponsor Performance Report Endpoint
-   Enforces strict token-based authorization and client-scoped data isolation.
+   Enforces strict token-based authorization, client-scoped data isolation,
+   and a 3-hour rate limit on analytics queries.
+   Fetches 100% real insights directly from Supabase (Zero mock data).
    ========================================================================== */
 
-const DEMO_TOKENS = {
-  "svf-music-demo-token-98f2a1b4e6": {
-    client_name: "SVF Music",
-    is_active: true,
-    expires_at: null
-  },
-  "pujo-fashion-demo-token-4c7b8e1a": {
-    client_name: "Pujo Fashion House",
-    is_active: true,
-    expires_at: null
+// In-memory rate limiter for 3-hour rolling window
+const RATE_LIMIT_WINDOW_MS = 3 * 60 * 60 * 1000; // 3 Hours
+const MAX_REQUESTS_PER_WINDOW = 60; // Max 60 requests per 3-hour window
+const tokenRateLimitStore = new Map();
+
+function checkRateLimit(key) {
+  const now = Date.now();
+  const entry = tokenRateLimitStore.get(key);
+
+  if (!entry) {
+    tokenRateLimitStore.set(key, { count: 1, windowStart: now });
+    return {
+      limited: false,
+      remaining: MAX_REQUESTS_PER_WINDOW - 1,
+      resetInMs: RATE_LIMIT_WINDOW_MS
+    };
   }
-};
+
+  const elapsed = now - entry.windowStart;
+  if (elapsed > RATE_LIMIT_WINDOW_MS) {
+    // 3-hour window expired, reset
+    tokenRateLimitStore.set(key, { count: 1, windowStart: now });
+    return {
+      limited: false,
+      remaining: MAX_REQUESTS_PER_WINDOW - 1,
+      resetInMs: RATE_LIMIT_WINDOW_MS
+    };
+  }
+
+  if (entry.count >= MAX_REQUESTS_PER_WINDOW) {
+    const retryAfterMs = RATE_LIMIT_WINDOW_MS - elapsed;
+    return {
+      limited: true,
+      remaining: 0,
+      resetInMs: retryAfterMs
+    };
+  }
+
+  entry.count++;
+  return {
+    limited: false,
+    remaining: MAX_REQUESTS_PER_WINDOW - entry.count,
+    resetInMs: RATE_LIMIT_WINDOW_MS - elapsed
+  };
+}
 
 module.exports = async function handler(req, res) {
   // CORS Headers
@@ -25,7 +60,7 @@ module.exports = async function handler(req, res) {
     "Access-Control-Allow-Headers",
     "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
   );
-  // Cache-Control: Private, never cache sensitive reports
+  // Never cache sensitive authenticated analytics
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
 
   if (req.method === "OPTIONS") {
@@ -38,7 +73,6 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1. Extract Token
-    // Support req.query.token or parsed URL query params
     let token = "";
     if (req.query && req.query.token) {
       token = req.query.token;
@@ -60,16 +94,39 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // 2. Validate Token Against Supabase or Demo Store
+    // 2. Enforce 3-Hour Rate Limiting
+    const headers = req.headers || {};
+    const clientIp = headers["x-forwarded-for"] || req.connection?.remoteAddress || req.socket?.remoteAddress || "local";
+    const rateLimitKey = `${token}_${clientIp}`;
+    const rateCheck = checkRateLimit(rateLimitKey);
+
+    res.setHeader("X-RateLimit-Limit", MAX_REQUESTS_PER_WINDOW);
+    res.setHeader("X-RateLimit-Remaining", rateCheck.remaining);
+    res.setHeader("X-RateLimit-Reset", Math.ceil((Date.now() + rateCheck.resetInMs) / 1000));
+
+    if (rateCheck.limited) {
+      const resetMinutes = Math.ceil(rateCheck.resetInMs / (60 * 1000));
+      res.setHeader("Retry-After", Math.ceil(rateCheck.resetInMs / 1000));
+      return res.status(429).json({
+        success: false,
+        error: `Rate limit reached: Maximum report requests exceeded for the current 3-hour window. Please try again in ${resetMinutes} minutes.`,
+        rate_limit: {
+          window_hours: 3,
+          max_requests: MAX_REQUESTS_PER_WINDOW,
+          remaining: 0,
+          retry_after_seconds: Math.ceil(rateCheck.resetInMs / 1000)
+        }
+      });
+    }
+
+    // 3. Connect to Supabase via Service Role Key (Enforces Multi-Tenant Token Isolation)
     const supabaseUrl = process.env.SUPABASE_URL || "https://bwruqavaexkciiuydgmg.supabase.co";
     const supabaseKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_ANON_KEY ||
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVxYXZhZXhrY2lpdXlkZ21nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NzMzNzQsImV4cCI6MjEwNDI0OTM3NH0.Ussc8Yip93_vZ1RZHJVcDprN8ru8OeRkXhybWYH-YGM";
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVxYXZhZXhrY2lpdXlkZ21nIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODY3MzM3NCwiZXhwIjoyMTA0MjQ5Mzc0fQ.Fl6RfAfQvMVhV_eQ8TuG3mbS1PbRG1Hm404-U_OqK8Y";
 
     let tokenRecord = null;
 
-    // Check Supabase table: sponsor_report_tokens
     try {
       const tokenRes = await fetch(
         `${supabaseUrl}/rest/v1/sponsor_report_tokens?token=eq.${encodeURIComponent(token)}&select=*`,
@@ -91,19 +148,7 @@ module.exports = async function handler(req, res) {
       console.warn("[sponsor-report] Database token lookup error:", dbErr.message);
     }
 
-    // Check Fallback / Demo Token Store if not found in database
-    if (!tokenRecord && DEMO_TOKENS[token]) {
-      tokenRecord = {
-        token: token,
-        client_name: DEMO_TOKENS[token].client_name,
-        is_active: DEMO_TOKENS[token].is_active,
-        expires_at: DEMO_TOKENS[token].expires_at,
-        created_at: new Date().toISOString()
-      };
-    }
-
-    // Multi-tenant Authorization Gate:
-    // If token not found, marked inactive/revoked, or expired -> Deny access
+    // Token Authorization Check
     if (!tokenRecord) {
       return res.status(403).json({
         success: false,
@@ -128,16 +173,14 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 3. Strictly Scoped Data Retrieval:
-    // Identity is derived ONLY from the validated token record.
-    // Any other client name passed in query params is ignored completely.
+    // 4. Strictly Scoped Real Data Retrieval (Identity derived ONLY from verified token)
     const authorizedClient = tokenRecord.client_name;
 
     let clientAds = [];
     let clientEvents = [];
 
     try {
-      // Query Ads for this sponsor only
+      // Query Real Ads for this sponsor only
       const adsRes = await fetch(
         `${supabaseUrl}/rest/v1/ads?client_name=eq.${encodeURIComponent(authorizedClient)}&select=*&order=created_at.desc`,
         {
@@ -152,7 +195,7 @@ module.exports = async function handler(req, res) {
         clientAds = await adsRes.json();
       }
 
-      // Query Analytics for this sponsor only
+      // Query Real Analytics events for this sponsor's ads
       const analyticsRes = await fetch(
         `${supabaseUrl}/rest/v1/ad_analytics?client_name=eq.${encodeURIComponent(authorizedClient)}&select=*&order=created_at.desc`,
         {
@@ -167,63 +210,26 @@ module.exports = async function handler(req, res) {
         clientEvents = await analyticsRes.json();
       }
     } catch (fetchErr) {
-      console.warn("[sponsor-report] Error fetching sponsor records:", fetchErr.message);
+      console.warn("[sponsor-report] Error fetching real records from Supabase:", fetchErr.message);
     }
 
-    // If database returned no ads, fallback to known sample data if matching demo sponsor
-    if ((!clientAds || clientAds.length === 0) && authorizedClient === "SVF Music") {
-      clientAds = [
-        {
-          id: "00000000-0000-0000-0000-000000000001",
-          title: "বাঙালির পুজোর সেরা গান শুনুন",
-          subtitle: "Special festive puja playlist collection by SVF Music",
-          badge: "SPONSORED",
-          destination_url: "https://www.youtube.com/",
-          image_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&auto=format&fit=crop&q=80",
-          client_name: "SVF Music",
-          duration_seconds: 8,
-          priority: 10,
-          is_active: true,
-          start_at: null,
-          end_at: null,
-          created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-        }
-      ];
-    } else if ((!clientAds || clientAds.length === 0) && authorizedClient === "Pujo Fashion House") {
-      clientAds = [
-        {
-          id: "00000000-0000-0000-0000-000000000002",
-          title: "উৎসবের আনন্দ ও সাজপোশাক",
-          subtitle: "Durga Puja festive ethnic collection — Up to 40% Off",
-          badge: "OFFER",
-          destination_url: "https://www.myntra.com/",
-          image_url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=120&auto=format&fit=crop&q=80",
-          client_name: "Pujo Fashion House",
-          duration_seconds: 7,
-          priority: 5,
-          is_active: true,
-          start_at: null,
-          end_at: null,
-          created_at: new Date(Date.now() - 86400000 * 5).toISOString()
-        }
-      ];
-    }
+    clientAds = Array.isArray(clientAds) ? clientAds : [];
+    clientEvents = Array.isArray(clientEvents) ? clientEvents : [];
 
-    // 4. Metric Calculations & Aggregation
+    // 5. Aggregate Real Insights & Metrics
     const statsByAd = {};
     const dailyMap = {};
     const deviceMap = { desktop: 0, mobile: 0, tablet: 0 };
     let totalImpressions = 0;
     let totalClicks = 0;
 
-    // Initialize stats for each campaign
+    // Initialize stats for each real ad
     clientAds.forEach((ad) => {
       statsByAd[ad.id] = { impressions: 0, clicks: 0 };
     });
 
-    // Process analytics events
+    // Process real analytics events
     clientEvents.forEach((ev) => {
-      // Event belongs to this sponsor
       if (!statsByAd[ev.ad_id]) {
         statsByAd[ev.ad_id] = { impressions: 0, clicks: 0 };
       }
@@ -251,12 +257,12 @@ module.exports = async function handler(req, res) {
       }
     });
 
-    // Calculate Overall CTR
+    // Calculate Real CTR
     const overallCtr = totalImpressions > 0
       ? Number(((totalClicks / totalImpressions) * 100).toFixed(2))
       : 0.0;
 
-    // Build Campaigns Report
+    // Build Real Campaigns Report
     const campaigns = clientAds.map((ad) => {
       const s = statsByAd[ad.id] || { impressions: 0, clicks: 0 };
       const adCtr = s.impressions > 0
@@ -281,7 +287,7 @@ module.exports = async function handler(req, res) {
       };
     });
 
-    // Format Daily Trends (sorted chronologically)
+    // Format Real Daily Trends (sorted chronologically)
     const dailyTrends = Object.keys(dailyMap)
       .sort()
       .map((dateKey) => {
@@ -297,7 +303,7 @@ module.exports = async function handler(req, res) {
         };
       });
 
-    // 5. Return Isolated Sponsor Report Payload
+    // 6. Return 100% Real Scoped Analytics
     return res.status(200).json({
       success: true,
       sponsor_name: authorizedClient,
@@ -305,6 +311,11 @@ module.exports = async function handler(req, res) {
       token_info: {
         expires_at: tokenRecord.expires_at || null,
         created_at: tokenRecord.created_at || null
+      },
+      rate_limit: {
+        window_hours: 3,
+        remaining_requests: rateCheck.remaining,
+        reset_in_seconds: Math.ceil(rateCheck.resetInMs / 1000)
       },
       metrics: {
         total_impressions: totalImpressions,

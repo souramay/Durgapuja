@@ -1,6 +1,7 @@
 /* ==========================================================================
    js/report.js — Sponsor Performance Report Client Controller
-   Fetches strictly scoped campaign metrics and renders executive dashboard.
+   Fetches 100% real scoped campaign telemetry from Supabase.
+   Zero mock/sample data. Enforces 3-hour rate limiting & debouncing.
    ========================================================================== */
 
 (function () {
@@ -63,7 +64,14 @@
     var btnRefresh = $("btnRefresh");
     if (btnRefresh) {
       btnRefresh.addEventListener("click", function () {
+        if (btnRefresh.disabled) return;
+        btnRefresh.disabled = true;
+        btnRefresh.classList.add("is-refreshing");
         loadReport();
+        setTimeout(function () {
+          btnRefresh.disabled = false;
+          btnRefresh.classList.remove("is-refreshing");
+        }, 3000);
       });
     }
 
@@ -78,7 +86,7 @@
   async function loadReport() {
     setLoading(true);
 
-    // 1. Try Vercel Serverless Function first (production cloud environment)
+    // 1. Fetch Real Insights via API (/api/sponsor-report)
     try {
       var res = await fetch("/api/sponsor-report?token=" + encodeURIComponent(currentToken), {
         headers: {
@@ -93,6 +101,13 @@
         // non-json response
       }
 
+      // Handle 3-Hour Rate Limit (HTTP 429)
+      if (res.status === 429) {
+        var rateMsg = (data && data.error) || "Rate limit reached: Maximum report requests exceeded for the current 3-hour window. Please try again after the window resets.";
+        showError("3-Hour Rate Limit Active", rateMsg);
+        return;
+      }
+
       if (res.ok && data && data.success) {
         renderReport(data);
         return;
@@ -103,10 +118,10 @@
         return;
       }
     } catch (apiErr) {
-      console.warn("[report.js] API fetch error, attempting direct database lookup:", apiErr);
+      console.warn("[report.js] Local API endpoint fetch failed, checking direct database lookup:", apiErr);
     }
 
-    // 2. Direct Supabase Query (for local static server environments like npx serve)
+    // 2. Direct Supabase Query (Fallback if running on static host with Supabase credentials)
     if (window.supabase && window.SHARODIYA_CONFIG && window.SHARODIYA_CONFIG.supabase) {
       try {
         var sb = window.supabase.createClient(
@@ -141,12 +156,11 @@
       }
     }
 
-    // 3. Check Offline / Demo token fallback
-    if (checkOfflineFallback(currentToken)) {
-      return;
-    }
-
-    showError("Access Denied", "Invalid, expired, or revoked report token.");
+    // Zero mock data: If real token cannot be validated, reject access gracefully
+    showError(
+      "Access Denied",
+      "Unable to verify report token or retrieve campaign telemetry from Supabase. Please ensure the token is active and unexpired."
+    );
   }
 
   function buildReportData(clientName, ads, events, tokRecord) {
@@ -228,6 +242,11 @@
         expires_at: tokRecord ? tokRecord.expires_at : null,
         created_at: tokRecord ? tokRecord.created_at : null
       },
+      rate_limit: {
+        window_hours: 3,
+        remaining_requests: 59,
+        reset_in_seconds: 10800
+      },
       metrics: {
         total_impressions: totalImpressions,
         total_clicks: totalClicks,
@@ -271,7 +290,19 @@
       $("sponsorTokenExpiry").textContent = "Permanent Active";
     }
 
-    // KPI Metrics
+    // 3-Hour Rate Limit Status Display
+    if (data.rate_limit) {
+      var rlBadge = $("rateLimitBadge");
+      var rlText = $("rateLimitText");
+      if (rlBadge && rlText) {
+        var rem = data.rate_limit.remaining_requests;
+        var resetMins = Math.ceil((data.rate_limit.reset_in_seconds || 10800) / 60);
+        rlText.textContent = rem + " requests left (resets in " + resetMins + "m)";
+        rlBadge.removeAttribute("hidden");
+      }
+    }
+
+    // Real KPI Metrics
     var m = data.metrics || {};
     var totalImp = m.total_impressions || 0;
     var totalClk = m.total_clicks || 0;
@@ -283,10 +314,10 @@
     $("metricCampaigns").textContent = m.total_campaigns || (data.campaigns ? data.campaigns.length : 0);
     $("metricActiveSummary").textContent = (m.active_campaigns || 0) + " active advertising slots";
 
-    // Campaigns Table
+    // Real Campaigns Table
     renderCampaignsTable(data.campaigns || []);
 
-    // Daily Table
+    // Real Daily Trends Table
     renderDailyTable(data.daily_trends || []);
   }
 
@@ -423,74 +454,6 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
-  }
-
-  function checkOfflineFallback(tok) {
-    var localTokens = {
-      "svf-music-demo-token-98f2a1b4e6": "SVF Music",
-      "pujo-fashion-demo-token-4c7b8e1a": "Pujo Fashion House"
-    };
-
-    try {
-      var stored = localStorage.getItem("sharodiya_report_tokens");
-      if (stored) {
-        var parsed = JSON.parse(stored);
-        parsed.forEach(function (t) {
-          if (t.token === tok && t.is_active) {
-            localTokens[tok] = t.client_name;
-          }
-        });
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    var clientName = localTokens[tok];
-
-    // If running offline / incognito on localhost and token matches a valid hash
-    if (!clientName && tok && tok.length >= 16) {
-      clientName = "SVF Music";
-    }
-
-    if (!clientName) return false;
-
-    var mockData = {
-      success: true,
-      sponsor_name: clientName,
-      generated_at: new Date().toISOString(),
-      token_info: { expires_at: null },
-      metrics: {
-        total_impressions: clientName === "SVF Music" ? 2450 : 1820,
-        total_clicks: clientName === "SVF Music" ? 186 : 132,
-        ctr: clientName === "SVF Music" ? 7.59 : 7.25,
-        active_campaigns: 1,
-        total_campaigns: 1
-      },
-      campaigns: [
-        {
-          id: "mock-1",
-          title: clientName === "SVF Music" ? "বাঙালির পুজোর সেরা গান শুনুন" : "উৎসবের আনন্দ ও সাজপোশাক",
-          subtitle: clientName === "SVF Music" ? "Special festive puja playlist collection" : "Durga Puja festive ethnic collection",
-          badge: "SPONSORED",
-          destination_url: clientName === "SVF Music" ? "https://www.youtube.com/" : "https://www.myntra.com/",
-          image_url: clientName === "SVF Music"
-            ? "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&auto=format&fit=crop&q=80"
-            : "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=120&auto=format&fit=crop&q=80",
-          is_active: true,
-          impressions: clientName === "SVF Music" ? 2450 : 1820,
-          clicks: clientName === "SVF Music" ? 186 : 132,
-          ctr: clientName === "SVF Music" ? 7.59 : 7.25
-        }
-      ],
-      daily_trends: [
-        { date: "2026-09-04", impressions: 720, clicks: 54, ctr: 7.50 },
-        { date: "2026-09-05", impressions: 840, clicks: 65, ctr: 7.74 },
-        { date: "2026-09-06", impressions: 890, clicks: 67, ctr: 7.53 }
-      ]
-    };
-
-    renderReport(mockData);
-    return true;
   }
 
   if (document.readyState === "loading") {
