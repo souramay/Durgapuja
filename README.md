@@ -109,14 +109,44 @@ Somewhere in here is an easter egg. Two ways in, and that is all the help you ge
 ## Layout
 
 ```
-config.js          your playlist
+config.js          your playlist & configuration
+css/ad-island.css  top-center notification island styling
+css/admin.css      admin dashboard & client portal styling
+js/ads-service.js  ad management, local fallback & Supabase analytics
+js/ad-island.js    ad island rotation, hover pause & event tracking
+js/admin.js        admin panel controller & sponsor reporting
 js/scenes.js       the seven posters + the crossfade stage
 js/ensemble.js     the synthesised fallback — dhak, kanshor, shankha,
                    tanpura and a bansuri improvising in Raga Durga
 js/youtube.js      IFrame Player API wrapper + URL parsing
 js/player.js       one transport over both sources, plus the visualiser
 js/main.js         DOM wiring, shortcuts
+admin.html         ad campaign manager & client analytics dashboard
+supabase-schema.sql database schema, indexes, RLS policies & summary view
 ```
+
+---
+
+## Advertisements & Sponsor Analytics
+
+Sharodiya includes a responsive, top-center **floating notification island** for announcements and sponsored campaigns:
+
+- **Top-Center Placement**: Sleek capsule floating banner with white background and festive red border.
+- **Rotation & Scheduling**: Automatically cycles through active ads according to configured durations, start dates, and end dates.
+- **Hover to Pause**: Pauses the rotation and countdown progress bar when hovered for easy reading and interaction.
+- **Responsive**: Adapts gracefully across desktop, tablet, and mobile screens.
+- **Admin Management (`/admin`)**:
+  - Add, edit, reorder/priority, enable/disable, and delete ads.
+  - Set custom badges, destination URLs, duration in seconds, and banner thumbnails.
+  - Protected by admin passkey / Supabase Auth.
+- **Client & Sponsor Analytics**:
+  - Real-time tracking of impressions, clicks, and Click-Through Rate (CTR %).
+  - Filterable reports for clients/sponsors paying for advertisements.
+  - Shareable client report links (`/admin?client=<SponsorName>`).
+- **Supabase Cloud + Local Fallback**:
+  - Seamlessly integrates with Supabase (`ads` and `ad_analytics` tables).
+  - Ready-to-run schema script in `supabase-schema.sql` with full Row Level Security (RLS).
+  - Automatically falls back to resilient local storage if offline or unconfigured.
 
 **Two things worth knowing.**
 

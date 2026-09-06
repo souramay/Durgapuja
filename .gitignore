@@ -4,5 +4,14 @@ node_modules/
 Thumbs.db
 *.log
 
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+*.pem
+*.key
+
 # the source video; the served copy lives in media/
 /*.mp4

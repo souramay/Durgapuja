@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>শারদীয়া Admin — Advertisement & Client Analytics Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Baloo+Da+2:wght@600;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/ad-island.css">
+<link rel="stylesheet" href="css/admin.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪩</text></svg>">
+</head>
+<body class="admin-body">
+
+<!-- ================= AUTH GATE ================= -->
+<div id="authGate" class="auth-gate-modal">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-security-badge">
+        <svg class="auth-icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span>Authorized Admin Access</span>
+      </div>
+      <h1 class="auth-title">শারদীয়া Admin</h1>
+      <p class="auth-subtitle">Advertisement Management & Analytics Engine</p>
+    </div>
+
+    <form id="authForm" class="auth-form" onsubmit="return false;" novalidate>
+      <div class="auth-form-fields">
+        <!-- Field 1: Admin Email -->
+        <div class="auth-field">
+          <label class="form-label" for="sbEmailInput">Admin Email</label>
+          <div class="auth-input-wrap">
+            <svg class="auth-field-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+            <input type="email" id="sbEmailInput" class="form-input" placeholder="admin@example.com" autocomplete="username" required autofocus>
+          </div>
+        </div>
+
+        <!-- Field 2: Password -->
+        <div class="auth-field">
+          <label class="form-label" for="sbPassInput">Password</label>
+          <div class="auth-input-wrap">
+            <svg class="auth-field-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <input type="password" id="sbPassInput" class="form-input" placeholder="••••••••••••" autocomplete="current-password" required>
+            <button type="button" id="btnTogglePass" class="auth-eye-btn" title="Show or hide password" aria-label="Toggle password visibility">
+              <svg id="eyeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="authError" class="auth-error" hidden></div>
+
+      <button type="submit" id="btnAuthSubmit" class="btn btn-primary btn-block auth-submit-btn">
+        <span id="authSubmitText">Sign In to Dashboard</span>
+        <svg class="auth-arrow-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+      </button>
+
+      <div class="auth-security-footer">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+        <span>Protected by Supabase Auth & Row-Level Security</span>
+      </div>
+
+      <a href="/" class="auth-back-link">← Return to Sharodiya Radio</a>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MAIN ADMIN DASHBOARD ================= -->
+<div id="adminApp" class="admin-app" hidden>
+  <!-- Top Navigation Bar -->
+  <header class="admin-topbar">
+    <div class="admin-brand">
+      <span class="admin-brand-icon">🪩</span>
+      <div class="admin-brand-info">
+        <b>শারদীয়া Admin</b>
+        <span class="badge-tag">Ad & Analytics Engine</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="admin-nav">
+      <button type="button" class="nav-tab is-active" data-tab="ads">Advertisements</button>
+      <button type="button" class="nav-tab" data-tab="requests">Ad Requests <span id="pendingRequestsBadge" class="count-badge" style="background:#EF4444;color:#FFF;border:none;margin-left:4px;" hidden>0</span></button>
+      <button type="button" class="nav-tab" data-tab="analytics">Client Analytics</button>
+      <button type="button" class="nav-tab" data-tab="database">Supabase & Database</button>
+    </nav>
+
+    <!-- Topbar Actions -->
+    <div class="admin-actions">
+      <span id="supabaseStatusBadge" class="status-indicator">
+        <span class="status-dot"></span> <span id="supabaseStatusText">Checking...</span>
+      </span>
+      <span id="adminUserBadge" class="admin-user-badge" hidden></span>
+      <a href="/" target="_blank" class="btn btn-secondary btn-sm" title="Open live radio website">Live Radio ↗</a>
+      <button type="button" id="btnLogout" class="btn btn-outline btn-sm">Sign Out</button>
+    </div>
+  </header>
+
+  <!-- Content Container -->
+  <main class="admin-container">
+    
+    <!-- ================= TAB 1: ADVERTISEMENTS ================= -->
+    <section id="tab-ads" class="admin-tab-content is-active">
+      
+      <!-- Live Ad Island Preview Banner -->
+      <div class="card preview-card">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">Live Ad Island Preview</h3>
+            <p class="card-subtitle">Exact top-center floating pill as seen by visitors</p>
+          </div>
+          <span class="preview-note">White background · Red border · Auto-rotating</span>
+        </div>
+        <div class="preview-stage">
+          <div id="previewIslandMount" class="preview-island-mount"></div>
+        </div>
+      </div>
+
+      <!-- Ads Management Controls -->
+      <div class="section-toolbar">
+        <div class="toolbar-left">
+          <h2 class="section-heading">Campaigns & Advertisements</h2>
+          <span id="adsCountBadge" class="count-badge">0 Ads</span>
+        </div>
+        <div class="toolbar-right">
+          <div class="search-wrap">
+            <input type="text" id="adSearchInput" class="form-input search-input" placeholder="Search title or client...">
+          </div>
+          <select id="adStatusFilter" class="form-select filter-select">
+            <option value="all">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="scheduled">Scheduled (Upcoming)</option>
+            <option value="expired">Expired</option>
+            <option value="disabled">Disabled</option>
+          </select>
+          <button type="button" id="btnNewAd" class="btn btn-primary">+ Create Advertisement</button>
+        </div>
+      </div>
+
+      <!-- Ads Table / Grid -->
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">Order</th>
+                <th>Advertisement</th>
+                <th>Sponsor / Client</th>
+                <th>Duration</th>
+                <th>Schedule Window</th>
+                <th>Status</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adsTableBody">
+              <tr>
+                <td colspan="7" class="table-empty">Loading advertisements...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB: AD REQUESTS (LEADS) ================= -->
+    <section id="tab-requests" class="admin-tab-content">
+      <div class="section-toolbar">
+        <div class="toolbar-left">
+          <h2 class="section-heading">Advertisement Submission Requests</h2>
+          <span id="requestsCountBadge" class="count-badge">0 Requests</span>
+        </div>
+        <div class="toolbar-right">
+          <div class="search-wrap">
+            <input type="text" id="reqSearchInput" class="form-input search-input" placeholder="Search applicant, contact...">
+          </div>
+          <select id="reqStatusFilter" class="form-select filter-select">
+            <option value="all">All Requests</option>
+            <option value="pending" selected>Pending Only</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button type="button" id="btnRefreshRequests" class="btn btn-outline btn-sm">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date / Time</th>
+                <th>Applicant & Contact</th>
+                <th>Category</th>
+                <th>Selected Plan</th>
+                <th>Ad Description</th>
+                <th>Status</th>
+                <th style="text-align: right;">Review & Actions</th>
+              </tr>
+            </thead>
+            <tbody id="requestsTableBody">
+              <tr>
+                <td colspan="7" class="table-empty">Loading advertisement requests...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 2: CLIENT & SPONSOR ANALYTICS ================= -->
+    <section id="tab-analytics" class="admin-tab-content">
+      
+      <!-- KPI Stats Row -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">📢</div>
+          <div class="kpi-content">
+            <span class="kpi-label">Active Campaigns</span>
+            <span id="kpiActiveAds" class="kpi-value">0</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">👁️</div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Impressions</span>
+            <span id="kpiImpressions" class="kpi-value">0</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🖱️</div>
+          <div class="kpi-content">
+            <span class="kpi-label">Total Link Clicks</span>
+            <span id="kpiClicks" class="kpi-value">0</span>
+          </div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🎯</div>
+          <div class="kpi-content">
+            <span class="kpi-label">Average CTR</span>
+            <span id="kpiCtr" class="kpi-value">0.00%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Client Filter & Report Share -->
+      <div class="section-toolbar" style="margin-top:24px;">
+        <div class="toolbar-left">
+          <h2 class="section-heading">Sponsor Performance Reports</h2>
+          <span class="form-hint">Dedicated analytics for clients paying for ads</span>
+        </div>
+        <div class="toolbar-right">
+          <select id="clientAnalyticsFilter" class="form-select filter-select">
+            <option value="">All Sponsors</option>
+          </select>
+          <button type="button" id="btnCopyClientLink" class="btn btn-secondary btn-sm" title="Copy shareable read-only link for client">
+            🔗 Copy Sponsor Link
+          </button>
+          <button type="button" id="btnRefreshAnalytics" class="btn btn-outline btn-sm">Refresh Data</button>
+        </div>
+      </div>
+
+      <!-- Analytics Breakdown Table -->
+      <div class="card table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Ad Title</th>
+                <th>Sponsor / Client</th>
+                <th>Impressions</th>
+                <th>Clicks</th>
+                <th>CTR (%)</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th style="text-align: right;">Performance</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsTableBody">
+              <tr>
+                <td colspan="8" class="table-empty">Loading performance data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 3: SUPABASE & DATABASE ================= -->
+    <section id="tab-database" class="admin-tab-content">
+      
+      <div class="settings-grid">
+        <!-- Supabase Connection Config Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Supabase Database Configuration</h3>
+              <p class="card-subtitle">Connect your Supabase project to store ads and track real-time analytics in the cloud.</p>
+            </div>
+          </div>
+          <div class="card-body">
+            <form id="supabaseConfigForm" onsubmit="return false;">
+              <div class="form-group">
+                <label class="form-label" for="sbUrlInput">Project URL</label>
+                <input type="url" id="sbUrlInput" class="form-input" placeholder="https://xyzcompany.supabase.co">
+                <p class="form-hint">Found in your Supabase Dashboard -> Project Settings -> API.</p>
+              </div>
+
+              <div class="form-group" style="margin-top:14px;">
+                <label class="form-label" for="sbKeyInput">Anon Public Key</label>
+                <input type="text" id="sbKeyInput" class="form-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                <p class="form-hint">Safe to use in frontend. RLS ensures only active ads are public.</p>
+              </div>
+
+              <div id="sbConfigAlert" class="alert" hidden></div>
+
+              <div class="form-actions" style="margin-top:18px;">
+                <button type="button" id="btnSaveSbConfig" class="btn btn-primary">Save & Connect</button>
+                <button type="button" id="btnTestSbConfig" class="btn btn-secondary">Test Connection</button>
+                <button type="button" id="btnClearSbConfig" class="btn btn-outline">Reset to Local Storage</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- SQL Schema Quick-Copy Card -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3 class="card-title">Supabase SQL Migration Script</h3>
+              <p class="card-subtitle">Paste this in your Supabase SQL Editor to create tables, indexes, and RLS policies in one click.</p>
+            </div>
+            <button type="button" id="btnCopySql" class="btn btn-secondary btn-sm">📋 Copy SQL</button>
+          </div>
+          <div class="card-body">
+            <pre class="sql-code-block" id="sqlCodeBlock"><code>-- Tables & Policies created in supabase-schema.sql
+-- Run this in Supabase Project -> SQL Editor
+create extension if not exists "uuid-ossp";
+
+create table if not exists public.ads (
+  id uuid primary key default uuid_generate_v4(),
+  title text not null,
+  subtitle text default '',
+  badge text default 'SPONSORED',
+  destination_url text not null,
+  image_url text default '',
+  client_name text default 'Direct Sponsor',
+  client_email text default '',
+  duration_seconds integer not null default 7 check (duration_seconds >= 2),
+  priority integer not null default 1,
+  is_active boolean not null default true,
+  start_at timestamptz default null,
+  end_at timestamptz default null,
+  created_at timestamptz default timezone('utc'::text, now()) not null,
+  updated_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+create table if not exists public.ad_analytics (
+  id bigint generated always as identity primary key,
+  ad_id uuid not null references public.ads(id) on delete cascade,
+  client_name text default '',
+  event_type text not null check (event_type in ('impression', 'click')),
+  device_type text default 'desktop',
+  referrer text default '',
+  created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+-- Row Level Security (RLS)
+alter table public.ads enable row level security;
+alter table public.ad_analytics enable row level security;
+
+create policy "Public can view active scheduled ads" on public.ads
+  for select using (is_active = true and (start_at is null or start_at <= now()) and (end_at is null or end_at >= now()));
+
+create policy "Admins have full access to ads" on public.ads
+  for all to authenticated using (true) with check (true);
+
+create policy "Public can record impressions and clicks" on public.ad_analytics
+  for insert to anon, authenticated with check (true);
+
+create policy "Admins have full access to analytics" on public.ad_analytics
+  for select to authenticated using (true);</code></pre>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= MODAL: ADD / EDIT ADVERTISEMENT ================= -->
+<div id="adModal" class="modal-backdrop" hidden>
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="adModalTitle" class="modal-title">Create Advertisement</h3>
+      <button type="button" id="btnAdModalClose" class="modal-close-btn">&times;</button>
+    </div>
+
+    <form id="adForm" class="modal-form" onsubmit="return false;">
+      <input type="hidden" id="adFormId">
+
+      <div class="form-row">
+        <div class="form-group flex-2">
+          <label class="form-label" for="adInputTitle">Ad Title / Headline *</label>
+          <input type="text" id="adInputTitle" class="form-input" placeholder="e.g. বাঙালির পুজোর সেরা গান শুনুন" required>
+        </div>
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputBadge">Badge Text</label>
+          <input type="text" id="adInputBadge" class="form-input" placeholder="SPONSORED, OFFER, PROMO" value="SPONSORED">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label" for="adInputSubtitle">Subtitle / Tagline</label>
+        <input type="text" id="adInputSubtitle" class="form-input" placeholder="e.g. Special festive collection by SVF Music">
+      </div>
+
+      <div class="form-row" style="margin-top:12px;">
+        <div class="form-group flex-2">
+          <label class="form-label" for="adInputDestUrl">Destination URL *</label>
+          <input type="url" id="adInputDestUrl" class="form-input" placeholder="https://example.com/festive-offer" required>
+        </div>
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputDuration">Duration (seconds) *</label>
+          <input type="number" id="adInputDuration" class="form-input" min="3" max="60" value="7" required>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:12px;">
+        <label class="form-label" for="adInputImageUrl">Banner / Thumbnail Image URL</label>
+        <input type="url" id="adInputImageUrl" class="form-input" placeholder="https://images.unsplash.com/photo-...">
+        <p class="form-hint">Square or rounded image (e.g. 100x100px or logo). If empty, festive icon 🪩 will be shown.</p>
+      </div>
+
+      <div class="form-row" style="margin-top:12px;">
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputClient">Sponsor / Client Name *</label>
+          <input type="text" id="adInputClient" class="form-input" placeholder="e.g. SVF Music or Pujo Bazaar" required>
+        </div>
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputClientEmail">Client Email (Optional)</label>
+          <input type="email" id="adInputClientEmail" class="form-input" placeholder="client@example.com">
+        </div>
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputPriority">Priority / Weight</label>
+          <input type="number" id="adInputPriority" class="form-input" min="1" max="100" value="10">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-top:12px;">
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputStart">Start Date & Time (Optional)</label>
+          <input type="datetime-local" id="adInputStart" class="form-input">
+        </div>
+        <div class="form-group flex-1">
+          <label class="form-label" for="adInputEnd">End Date & Time (Optional)</label>
+          <input type="datetime-local" id="adInputEnd" class="form-input">
+        </div>
+      </div>
+
+      <div class="form-check-group" style="margin-top:16px;">
+        <label class="form-check-label">
+          <input type="checkbox" id="adInputIsActive" checked>
+          <span>Enable Advertisement (Active)</span>
+        </label>
+      </div>
+
+      <div id="modalFormError" class="auth-error" hidden style="margin-top:12px;"></div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnAdModalCancel" class="btn btn-outline">Cancel</button>
+        <button type="submit" id="btnAdModalSave" class="btn btn-primary">Save Advertisement</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="js/ads-service.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

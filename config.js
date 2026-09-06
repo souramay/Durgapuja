@@ -93,5 +93,11 @@ window.SHARODIYA_CONFIG = {
   volume: 80,          // 0-100
   sceneSeconds: 18,    // how long each poster is held
   fadeSeconds: 1.1,    // crossfade between posters
-  ensembleTempo: 96    // BPM of the fallback dhak ensemble
+  ensembleTempo: 96,   // BPM of the fallback dhak ensemble
+
+  // Supabase Ads & Client Analytics (Public Anon Key)
+  supabase: {
+    url: "https://bwruqavaexkciiuydgmg.supabase.co",
+    anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVxYXZhZXhrY2lpdXlkZ21nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg2NzMzNzQsImV4cCI6MjEwNDI0OTM3NH0.Ussc8Yip93_vZ1RZHJVcDprN8ru8OeRkXhybWYH-YGM"
+  }
 };

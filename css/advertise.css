@@ -1,0 +1,522 @@
+/* ==========================================================================
+   advertise.css — Clean, Responsive "Advertise With Us" & Simplified Form
+   Zero emojis: Clean SVG icons and responsive mobile accessibility.
+   ========================================================================== */
+
+.ad-svg-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------ Player Bar Adjustments & In-Player Banner */
+
+:root {
+  --bar: 102px;
+}
+
+@media (max-width: 880px) {
+  :root {
+    --bar: 138px;
+  }
+}
+
+.player {
+  display: flex !important;
+  flex-direction: column !important;
+  height: var(--bar) !important;
+}
+
+.seek-wrap {
+  top: 34px !important;
+}
+
+.player-row {
+  flex: 1 1 auto !important;
+  height: calc(100% - 34px) !important;
+}
+
+.player-ad-mount {
+  position: relative;
+  z-index: 6;
+  width: 100%;
+  flex: 0 0 34px;
+  height: 34px;
+}
+
+.player-ad-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  padding: 0 clamp(8px, 1.4vw, 16px);
+  background: rgba(255, 255, 255, 0.78);
+  border-bottom: 1px solid rgba(59, 130, 246, 0.16);
+  gap: 8px;
+  user-select: none;
+}
+
+.player-ad-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.player-ad-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.player-ad-brand .ad-icon-svg {
+  color: #EF4444;
+  flex-shrink: 0;
+}
+
+.player-ad-label {
+  font-family: var(--display), "Space Grotesk", sans-serif;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #0F172A;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.player-ad-plans {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.player-plan-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 999px;
+  padding: 2px 7px;
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #0F172A;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  white-space: nowrap;
+}
+
+.player-plan-chip:hover {
+  background: #FEF2F2;
+  border-color: #EF4444;
+  transform: translateY(-1px);
+}
+
+.plan-chip-price {
+  font-weight: 800;
+  color: #EF4444;
+}
+
+.plan-chip-dur {
+  color: #64748B;
+  font-size: 9.5px;
+}
+
+.plan-chip-tag {
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 7.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.5px 4px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.player-ad-action {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.player-ad-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 25px;
+  padding: 0 10px;
+  background: #EF4444;
+  color: #FFFFFF;
+  font-family: var(--ui), sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1.5px solid #0F172A;
+  border-radius: 999px;
+  box-shadow: 1.5px 1.5px 0px #0F172A;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.player-ad-btn:hover {
+  background: #DC2626;
+  transform: translate(-1px, -1px);
+  box-shadow: 2px 2px 0px #0F172A;
+}
+
+.player-ad-btn:active {
+  transform: scale(0.96);
+}
+
+.player-ad-btn .ad-arrow-svg {
+  transition: transform 0.14s ease;
+}
+
+.player-ad-btn:hover .ad-arrow-svg {
+  transform: translateX(2px);
+}
+
+/* ---------------------------------------------------- Simplified Submission Modal */
+
+.ad-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 16px;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+.ad-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ad-modal-box {
+  background: #FFFFFF;
+  width: 100%;
+  max-width: 440px;
+  max-height: 92vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  border: 2px solid #0F172A;
+  box-shadow: 6px 6px 0px #0F172A;
+  padding: 22px 20px;
+  position: relative;
+  font-family: var(--ui), system-ui, sans-serif;
+  animation: modalSlideUp 0.22s cubic-bezier(0.22, 0.9, 0.32, 1);
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ad-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.ad-modal-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ad-modal-title-wrap .ad-icon-svg {
+  color: #EF4444;
+  margin-top: 2px;
+}
+
+.ad-modal-title {
+  font-family: var(--display), "Space Grotesk", sans-serif;
+  font-size: 18px;
+  margin: 0 0 3px;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.ad-modal-sub {
+  font-size: 12px;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.ad-modal-close {
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+
+.ad-modal-close:hover {
+  color: #EF4444;
+}
+
+/* Plan Selector Chips in Modal */
+
+.ad-plan-chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ad-plan-chip {
+  border: 1.5px solid #E2E8F0;
+  background: #F8FAFC;
+  border-radius: 12px;
+  padding: 8px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.ad-plan-chip:hover {
+  border-color: #EF4444;
+  background: #FFF5F5;
+}
+
+.ad-plan-chip.is-selected {
+  border-color: #EF4444;
+  background: #FEF2F2;
+  box-shadow: 2px 2px 0px #EF4444;
+}
+
+.chip-price {
+  font-family: var(--display), sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: #EF4444;
+  display: block;
+}
+
+.chip-dur {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0F172A;
+  display: block;
+}
+
+.chip-tag {
+  font-size: 9px;
+  color: #64748B;
+  display: block;
+  margin-top: 1px;
+}
+
+/* Simplified Modal Form Inputs */
+
+.ad-form-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.ad-form-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-bottom: 4px;
+}
+
+.ad-form-input,
+.ad-form-select {
+  font-family: var(--ui), system-ui, sans-serif;
+  font-size: 13.5px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  background: #FFFFFF;
+  color: #0F172A;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ad-form-input:focus,
+.ad-form-select:focus {
+  border-color: #EF4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.ad-form-hint {
+  font-size: 11px;
+  color: #64748B;
+  margin-top: 4px;
+}
+
+/* Status Messages */
+
+.ad-status-msg {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  margin-bottom: 14px;
+  line-height: 1.3;
+}
+
+.ad-status-msg.is-success {
+  background: #ECFDF5;
+  border: 1px solid #6EE7B7;
+  color: #065F46;
+}
+
+.ad-status-msg.is-error {
+  background: #FEF2F2;
+  border: 1px solid #FCA5A5;
+  color: #991B1B;
+}
+
+/* Modal Actions */
+
+.ad-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.ad-submit-btn {
+  flex: 1;
+  height: 42px;
+  padding: 0 16px;
+  background: #EF4444;
+  color: #FFFFFF;
+  font-family: var(--ui), sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 2px solid #0F172A;
+  border-radius: 10px;
+  box-shadow: 2px 2px 0px #0F172A;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.12s ease;
+}
+
+.ad-submit-btn:hover:not(:disabled) {
+  background: #DC2626;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0px #0F172A;
+}
+
+.ad-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.ad-cancel-btn {
+  height: 42px;
+  padding: 0 14px;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-family: var(--ui), sans-serif;
+  font-size: 13.5px;
+  font-weight: 700;
+  border: 1.5px solid #0F172A;
+  border-radius: 10px;
+  box-shadow: 2px 2px 0px #0F172A;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------- Responsive In-Player Banner & Modal */
+
+@media (max-width: 880px) {
+  .player-ad-bar {
+    padding: 0 10px;
+  }
+
+  .plan-chip-tag {
+    display: none;
+  }
+
+  .ad-modal-box {
+    padding: 18px 16px;
+    max-width: calc(100vw - 24px);
+  }
+
+  .ad-modal-title {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .player-ad-plans {
+    display: none;
+  }
+
+  .player-ad-brand::after {
+    content: "· From ₹49";
+    font-size: 10px;
+    font-weight: 700;
+    color: #EF4444;
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 2px;
+    white-space: nowrap;
+  }
+
+  .player-ad-btn {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 10.5px;
+    gap: 4px;
+  }
+
+  .player-ad-btn span {
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 380px) {
+  .player-ad-bar {
+    padding: 0 6px;
+    gap: 4px;
+  }
+
+  .player-ad-label {
+    font-size: 10px;
+  }
+
+  .player-ad-brand::after {
+    font-size: 9px;
+    padding: 0 4px;
+  }
+
+  .player-ad-btn {
+    padding: 0 6px;
+    font-size: 10px;
+  }
+}
