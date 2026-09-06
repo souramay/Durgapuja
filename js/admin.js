@@ -36,6 +36,7 @@
     this.bindRequestEvents();
     this.bindAnalyticsEvents();
     this.bindDatabaseEvents();
+    this.bindAdSuccessModalEvents();
 
     // Listen to real-time auth changes from Supabase
     if (window.AdsService && window.AdsService.supabase) {
@@ -285,6 +286,7 @@
       this.loadAdRequests();
     } else if (tabId === "analytics") {
       this.loadAnalytics();
+      this.loadReportTokens();
     } else if (tabId === "database") {
       this.loadDatabaseConfig();
     }
@@ -391,7 +393,7 @@
       function makeFallbackIcon() {
         var f = document.createElement("div");
         f.className = "table-ad-fallback";
-        f.textContent = "🪩";
+        f.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>';
         return f;
       }
 
@@ -514,7 +516,7 @@
       if (ad.image_url) {
         media.innerHTML = '<img class="ad-island-thumb" src="' + escapeHtml(ad.image_url) + '" alt="">';
       } else {
-        media.innerHTML = '<span class="ad-island-fallback-icon">🪩</span>';
+        media.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>';
       }
       island.appendChild(media);
 
@@ -602,6 +604,7 @@
       };
 
       try {
+        var generatedToken = null;
         if (self.currentEditId) {
           await window.AdsService.updateAd(self.currentEditId, adData);
         } else {
@@ -610,10 +613,20 @@
             await window.AdsService.updateAdRequestStatus(self.pendingApprovalRequestId, "approved");
             self.pendingApprovalRequestId = null;
           }
+          try {
+            generatedToken = await window.AdsService.getOrCreateReportToken(clientName);
+          } catch (tokErr) {
+            console.warn("[AdminController] Auto-token generation note:", tokErr);
+          }
         }
         self.closeAdModal();
         self.loadAds();
         self.loadAdRequests();
+        self.loadReportTokens();
+
+        if (generatedToken && generatedToken.token) {
+          self.openAdSuccessModal(clientName, generatedToken.token);
+        }
       } catch (err) {
         errEl.textContent = "Error saving advertisement: " + err.message;
         errEl.removeAttribute("hidden");
@@ -647,6 +660,64 @@
     $("adModal").setAttribute("hidden", "true");
     this.currentEditId = null;
     this.pendingApprovalRequestId = null;
+  };
+
+  /* ------------------------------------------- Ad Created & Report Success Modal */
+
+  AdminController.prototype.openAdSuccessModal = function (clientName, token) {
+    var modal = $("adSuccessModal");
+    if (!modal) return;
+    $("adSuccessClientName").textContent = clientName;
+    var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(token);
+    $("adSuccessShareUrl").value = shareUrl;
+    $("adSuccessOpenLink").href = shareUrl;
+    var copyTxt = $("btnAdSuccessCopyText");
+    if (copyTxt) copyTxt.textContent = "Copy Link";
+    modal.removeAttribute("hidden");
+  };
+
+  AdminController.prototype.closeAdSuccessModal = function () {
+    var modal = $("adSuccessModal");
+    if (modal) modal.setAttribute("hidden", "true");
+  };
+
+  AdminController.prototype.bindAdSuccessModalEvents = function () {
+    var self = this;
+    var closeBtn = $("btnAdSuccessClose");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", function () {
+        self.closeAdSuccessModal();
+      });
+    }
+    var doneBtn = $("btnAdSuccessDone");
+    if (doneBtn) {
+      doneBtn.addEventListener("click", function () {
+        self.closeAdSuccessModal();
+      });
+    }
+    var copyBtn = $("btnAdSuccessCopy");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", function () {
+        var input = $("adSuccessShareUrl");
+        if (input && input.value) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(input.value).then(function () {
+              var txt = $("btnAdSuccessCopyText");
+              if (txt) txt.textContent = "Copied!";
+              setTimeout(function () {
+                var t = $("btnAdSuccessCopyText");
+                if (t) t.textContent = "Copy Link";
+              }, 2500);
+            });
+          } else {
+            input.select();
+            document.execCommand("copy");
+            var txt = $("btnAdSuccessCopyText");
+            if (txt) txt.textContent = "Copied!";
+          }
+        }
+      });
+    }
   };
 
   /* --------------------------------------------------------- Ad Requests (Leads) */
@@ -859,25 +930,211 @@
 
     $("clientAnalyticsFilter").addEventListener("change", function () {
       self.loadAnalytics();
+      self.loadReportTokens();
     });
 
     $("btnRefreshAnalytics").addEventListener("click", function () {
       self.loadAnalytics();
+      self.loadReportTokens();
     });
 
-    $("btnCopyClientLink").addEventListener("click", function () {
+    $("btnOpenTokenModal").addEventListener("click", function () {
       var selected = $("clientAnalyticsFilter").value;
-      var baseUrl = window.location.origin + window.location.pathname;
-      var shareUrl = selected ? baseUrl + "?client=" + encodeURIComponent(selected) : baseUrl + "?client=all";
+      self.openTokenModal(selected);
+    });
 
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(shareUrl).then(function () {
-          alert("Sponsor Report Link copied to clipboard:\n" + shareUrl);
-        });
-      } else {
-        prompt("Copy this sponsor report link:", shareUrl);
+    $("btnTokenModalClose").addEventListener("click", function () {
+      self.closeTokenModal();
+    });
+
+    $("btnTokenModalCancel").addEventListener("click", function () {
+      self.closeTokenModal();
+    });
+
+    $("tokenForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var errEl = $("tokenModalError");
+      errEl.setAttribute("hidden", "true");
+
+      var client = $("tokenInputClient").value.trim();
+      var days = parseInt($("tokenInputDuration").value, 10) || 0;
+
+      if (!client) {
+        errEl.textContent = "Please enter the sponsor / client name.";
+        errEl.removeAttribute("hidden");
+        return;
+      }
+
+      var submitBtn = $("btnTokenModalGenerate");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Generating...";
+
+      try {
+        var res = await window.AdsService.createReportToken(client, days);
+        self.closeTokenModal();
+        self.loadReportTokens();
+
+        var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(res.token);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareUrl).then(function () {
+            alert("Secure Sponsor Report Link created and copied to clipboard!\n\nSponsor: " + client + "\nLink: " + shareUrl);
+          });
+        } else {
+          prompt("Copy this secure sponsor report link:", shareUrl);
+        }
+      } catch (err) {
+        errEl.textContent = "Error creating token: " + err.message;
+        errEl.removeAttribute("hidden");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Generate & Copy Link";
       }
     });
+
+    $("btnCopyClientLink").addEventListener("click", async function () {
+      var selected = $("clientAnalyticsFilter").value;
+      if (!selected) {
+        self.openTokenModal("");
+        return;
+      }
+
+      // Check if active token exists for this client
+      var tokens = await window.AdsService.fetchReportTokens();
+      var activeTok = tokens.find(function (t) {
+        return t.client_name.toLowerCase() === selected.toLowerCase() && t.is_active;
+      });
+
+      if (activeTok) {
+        var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(activeTok.token);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareUrl).then(function () {
+            alert("Sponsor Report Link copied to clipboard:\n\nSponsor: " + selected + "\nLink: " + shareUrl);
+          });
+        } else {
+          prompt("Copy this sponsor report link:", shareUrl);
+        }
+      } else {
+        // Open modal to generate one
+        self.openTokenModal(selected);
+      }
+    });
+  };
+
+  AdminController.prototype.openTokenModal = function (prefillClient) {
+    var modal = $("tokenModal");
+    var input = $("tokenInputClient");
+    var err = $("tokenModalError");
+    err.setAttribute("hidden", "true");
+
+    // Populate datalist with unique clients from ads
+    var datalist = $("sponsorDatalist");
+    datalist.innerHTML = "";
+    var clientSet = new Set();
+    this.ads.forEach(function (a) {
+      if (a.client_name) clientSet.add(a.client_name);
+    });
+    clientSet.forEach(function (c) {
+      var opt = document.createElement("option");
+      opt.value = c;
+      datalist.appendChild(opt);
+    });
+
+    input.value = prefillClient || "";
+    $("tokenInputDuration").value = "30";
+    modal.removeAttribute("hidden");
+    input.focus();
+  };
+
+  AdminController.prototype.closeTokenModal = function () {
+    $("tokenModal").setAttribute("hidden", "true");
+  };
+
+  AdminController.prototype.loadReportTokens = async function () {
+    var tbody = $("tokensTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Loading shareable sponsor links...</td></tr>';
+
+    try {
+      var tokens = await window.AdsService.fetchReportTokens();
+      var selectedClient = ($("clientAnalyticsFilter").value || "").trim().toLowerCase();
+
+      if (selectedClient) {
+        tokens = tokens.filter(function (t) {
+          return (t.client_name || "").toLowerCase() === selectedClient;
+        });
+      }
+
+      if (tokens.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No shareable sponsor links found. Click "+ New Sponsor Link" above to generate one.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = "";
+      var self = this;
+
+      tokens.forEach(function (t) {
+        var tr = document.createElement("tr");
+
+        // Status
+        var isExpired = t.expires_at && new Date(t.expires_at) < new Date();
+        var statusHtml = "";
+        if (!t.is_active) {
+          statusHtml = '<span class="status-pill is-disabled">Revoked</span>';
+        } else if (isExpired) {
+          statusHtml = '<span class="status-pill is-expired">Expired</span>';
+        } else {
+          statusHtml = '<span class="status-pill is-active">Active</span>';
+        }
+
+        var expiryText = t.expires_at ? new Date(t.expires_at).toLocaleDateString() : "Permanent";
+        var createdText = t.created_at ? new Date(t.created_at).toLocaleDateString() : "—";
+        var shareUrl = window.location.origin + "/report?token=" + encodeURIComponent(t.token);
+        var tokenShort = t.token.length > 18 ? t.token.slice(0, 10) + "…" + t.token.slice(-6) : t.token;
+
+        tr.innerHTML =
+          '<td><b>' + escapeHtml(t.client_name) + '</b></td>' +
+          '<td><code style="font-size:11px;background:#F1F5F9;padding:2px 6px;border-radius:4px;" title="' + escapeHtml(t.token) + '">' + escapeHtml(tokenShort) + '</code></td>' +
+          '<td><span style="font-size:12px;color:#64748B;">' + escapeHtml(expiryText) + '</span></td>' +
+          '<td>' + statusHtml + '</td>' +
+          '<td><span style="font-size:12px;color:#64748B;">' + escapeHtml(createdText) + '</span></td>' +
+          '<td style="text-align:right;">' +
+            '<div style="display:flex;gap:6px;justify-content:flex-end;">' +
+              '<button type="button" class="btn btn-secondary btn-sm btn-copy-tok" title="Copy shareable link">Copy Link</button>' +
+              '<a href="' + escapeHtml(shareUrl) + '" target="_blank" class="btn btn-outline btn-sm" title="Open client report">View ↗</a>' +
+              (t.is_active && !isExpired
+                ? '<button type="button" class="btn btn-danger btn-sm btn-revoke-tok" style="color:#DC2626;background:#FEF2F2;border-color:#FCA5A5;">Revoke</button>'
+                : '') +
+            '</div>' +
+          '</td>';
+
+        var btnCopy = tr.querySelector(".btn-copy-tok");
+        if (btnCopy) {
+          btnCopy.addEventListener("click", function () {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(shareUrl).then(function () {
+                alert("Copied shareable sponsor report link:\n" + shareUrl);
+              });
+            } else {
+              prompt("Copy shareable link:", shareUrl);
+            }
+          });
+        }
+
+        var btnRevoke = tr.querySelector(".btn-revoke-tok");
+        if (btnRevoke) {
+          btnRevoke.addEventListener("click", async function () {
+            if (confirm("Revoke this report link for " + t.client_name + "? The client will no longer be able to view their analytics.")) {
+              await window.AdsService.revokeReportToken(t.id);
+              self.loadReportTokens();
+            }
+          });
+        }
+
+        tbody.appendChild(tr);
+      });
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="6" class="table-empty" style="color:#B91C1C;">Error loading report tokens: ' + err.message + '</td></tr>';
+    }
   };
 
   AdminController.prototype.loadAnalytics = async function () {

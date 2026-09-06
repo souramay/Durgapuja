@@ -72,7 +72,24 @@ create table if not exists public.ad_requests (
 create index if not exists idx_ad_requests_status on public.ad_requests (status, created_at desc);
 
 -- ------------------------------------------------------------------------------
--- 4. ANALYTICS SUMMARY VIEW
+-- 4. SPONSOR REPORT TOKENS TABLE (Cryptographic Multi-Tenant Isolation)
+-- ------------------------------------------------------------------------------
+create table if not exists public.sponsor_report_tokens (
+  id uuid primary key default uuid_generate_v4(),
+  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  client_name text not null,
+  created_by text default 'admin',
+  is_active boolean not null default true,
+  expires_at timestamptz default null,
+  created_at timestamptz default timezone('utc'::text, now()) not null,
+  updated_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+create index if not exists idx_sponsor_tokens_lookup on public.sponsor_report_tokens (token, is_active);
+create index if not exists idx_sponsor_tokens_client on public.sponsor_report_tokens (client_name);
+
+-- ------------------------------------------------------------------------------
+-- 5. ANALYTICS SUMMARY VIEW
 -- ------------------------------------------------------------------------------
 create or replace view public.ad_analytics_summary as
 select
@@ -101,11 +118,12 @@ left join public.ad_analytics ev on a.id = ev.ad_id
 group by a.id, a.title, a.client_name, a.is_active, a.priority, a.duration_seconds, a.start_at, a.end_at, a.created_at;
 
 -- ------------------------------------------------------------------------------
--- 5. ROW LEVEL SECURITY (RLS) POLICIES
+-- 6. ROW LEVEL SECURITY (RLS) POLICIES
 -- ------------------------------------------------------------------------------
 alter table public.ads enable row level security;
 alter table public.ad_analytics enable row level security;
 alter table public.ad_requests enable row level security;
+alter table public.sponsor_report_tokens enable row level security;
 
 -- Drop existing policies if re-running
 drop policy if exists "Public can view active scheduled ads" on public.ads;
@@ -114,6 +132,7 @@ drop policy if exists "Public can record impressions and clicks" on public.ad_an
 drop policy if exists "Admins have full access to analytics" on public.ad_analytics;
 drop policy if exists "Public can submit ad requests" on public.ad_requests;
 drop policy if exists "Admins have full access to ad requests" on public.ad_requests;
+drop policy if exists "Admins have full access to report tokens" on public.sponsor_report_tokens;
 
 -- Policy: Public anon visitors can read active ads that are in their scheduled window
 create policy "Public can view active scheduled ads" on public.ads
@@ -156,33 +175,11 @@ create policy "Admins have full access to ad requests" on public.ad_requests
   using (true)
   with check (true);
 
--- ------------------------------------------------------------------------------
--- 6. INITIAL SAMPLE SEED DATA
--- ------------------------------------------------------------------------------
-insert into public.ads (id, title, subtitle, badge, destination_url, image_url, client_name, duration_seconds, priority, is_active)
-values
-  (
-    '00000000-0000-0000-0000-000000000001',
-    'বাঙালির পুজোর সেরা গান শুনুন',
-    'Special festive puja playlist collection by SVF Music',
-    'SPONSORED',
-    'https://www.youtube.com/',
-    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&auto=format&fit=crop&q=80',
-    'SVF Music',
-    8,
-    10,
-    true
-  ),
-  (
-    '00000000-0000-0000-0000-000000000002',
-    'উৎসবের আনন্দ ও সাজপোশাক',
-    'Durga Puja festive ethnic collection — Up to 40% Off',
-    'OFFER',
-    'https://www.myntra.com/',
-    'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=120&auto=format&fit=crop&q=80',
-    'Pujo Fashion House',
-    7,
-    5,
-    true
-  )
-on conflict (id) do nothing;
+-- Policy: Authenticated admin has full access to manage sponsor report tokens
+-- (Public anon has NO direct access to sponsor_report_tokens table; queries go through serverless API)
+create policy "Admins have full access to report tokens" on public.sponsor_report_tokens
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+

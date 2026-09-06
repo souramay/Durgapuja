@@ -4,7 +4,7 @@
   "private": true,
   "description": "Non-stop Durga Puja music over generative abstract wallpapers.",
   "scripts": {
-    "dev": "npx --yes serve@14 . -l 3000",
-    "start": "npx --yes serve@14 . -l 3000"
+    "dev": "node server.js",
+    "start": "node server.js"
   }
 }

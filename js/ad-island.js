@@ -15,7 +15,6 @@
     this.remainingMs = 0;
     this.currentTotalMs = 7000;
     this.isPaused = false;
-    this.isDismissed = false;
 
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", this.init.bind(this));
@@ -47,7 +46,7 @@
       var activeAds = await window.AdsService.fetchActiveAds();
       this.ads = Array.isArray(activeAds) ? activeAds : [];
 
-      if (this.isDismissed || this.ads.length === 0) {
+      if (this.ads.length === 0) {
         this.hide();
         return;
       }
@@ -106,6 +105,7 @@
     // Media Thumbnail
     var mediaEl = document.createElement("div");
     mediaEl.className = "ad-island-media";
+    var FALLBACK_ICON_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>';
     if (ad.image_url) {
       var img = document.createElement("img");
       img.className = "ad-island-thumb";
@@ -113,11 +113,11 @@
       img.decoding = "async";
       img.src = ad.image_url;
       img.onerror = function () {
-        mediaEl.innerHTML = '<span class="ad-island-fallback-icon">🪩</span>';
+        mediaEl.innerHTML = FALLBACK_ICON_SVG;
       };
       mediaEl.appendChild(img);
     } else {
-      mediaEl.innerHTML = '<span class="ad-island-fallback-icon">🪩</span>';
+      mediaEl.innerHTML = FALLBACK_ICON_SVG;
     }
     island.appendChild(mediaEl);
 
@@ -154,39 +154,16 @@
     }
     island.appendChild(bodyEl);
 
-    // Actions & Dots
+    // Actions & CTA (No dots between content and button)
     var actionsEl = document.createElement("div");
     actionsEl.className = "ad-island-actions";
 
-    if (hasMultiple) {
-      var dotsEl = document.createElement("div");
-      dotsEl.className = "ad-island-dots";
-      for (var i = 0; i < this.ads.length; i++) {
-        var dot = document.createElement("span");
-        dot.className = "ad-island-dot" + (i === this.currentIndex ? " is-active" : "");
-        dotsEl.appendChild(dot);
-      }
-      actionsEl.appendChild(dotsEl);
-    }
-
-    var ctaEl = document.createElement("div");
-    ctaEl.className = "ad-island-cta";
-    ctaEl.innerHTML = "↗";
-    ctaEl.title = "Open link";
-    actionsEl.appendChild(ctaEl);
-
-    var closeBtn = document.createElement("button");
-    closeBtn.className = "ad-island-close";
-    closeBtn.type = "button";
-    closeBtn.innerHTML = "×";
-    closeBtn.title = "Dismiss";
-    closeBtn.setAttribute("aria-label", "Dismiss advertisement");
-    closeBtn.addEventListener("click", function (e) {
-      e.stopPropagation();
-      self.isDismissed = true;
-      self.hide();
-    });
-    actionsEl.appendChild(closeBtn);
+    var ctaBtn = document.createElement("button");
+    ctaBtn.className = "ad-island-cta-btn";
+    ctaBtn.type = "button";
+    ctaBtn.setAttribute("aria-label", "Visit sponsor: " + (ad.client_name || ad.title || ""));
+    ctaBtn.innerHTML = '<span>Visit Sponsor</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>';
+    actionsEl.appendChild(ctaBtn);
 
     island.appendChild(actionsEl);
 
@@ -202,8 +179,7 @@
     }
 
     // Click handler for destination URL
-    island.addEventListener("click", function (e) {
-      if (e.target === closeBtn || closeBtn.contains(e.target)) return;
+    island.addEventListener("click", function () {
       if (window.AdsService) {
         window.AdsService.recordClick(ad);
       }

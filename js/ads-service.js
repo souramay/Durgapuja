@@ -15,43 +15,8 @@
     ADMIN_AUTH: "sharodiya_admin_auth"
   };
 
-  // Festive default sample ads
-  var DEFAULT_ADS = [
-    {
-      id: "ad-svf-music-festive-2026",
-      title: "বাঙালির পুজোর সেরা গান শুনুন",
-      subtitle: "Exclusive Durga Puja playlist & festive specials by SVF Music",
-      badge: "SPONSORED",
-      destination_url: "https://www.youtube.com/results?search_query=svf+durga+puja+songs",
-      image_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&auto=format&fit=crop&q=80",
-      client_name: "SVF Music",
-      client_email: "sponsor@svf.in",
-      duration_seconds: 7,
-      priority: 10,
-      is_active: true,
-      start_at: null,
-      end_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: "ad-ethnic-fashion-2026",
-      title: "উৎসবের আনন্দ ও সাজপোশাক",
-      subtitle: "Durga Puja Festive Handloom & Sarees — Up to 40% Off",
-      badge: "PUJO OFFER",
-      destination_url: "https://www.myntra.com/festive-ethnic-wear",
-      image_url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=120&auto=format&fit=crop&q=80",
-      client_name: "Pujo Bazaar Kolkata",
-      client_email: "promotions@pujobazaar.com",
-      duration_seconds: 8,
-      priority: 8,
-      is_active: true,
-      start_at: null,
-      end_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ];
+  // Zero mock ads for production
+  var DEFAULT_ADS = [];
 
   function AdsService() {
     this.supabase = null;
@@ -106,13 +71,12 @@
     try {
       var raw = localStorage.getItem(LS_KEYS.ADS);
       if (!raw) {
-        localStorage.setItem(LS_KEYS.ADS, JSON.stringify(DEFAULT_ADS));
-        return DEFAULT_ADS.slice();
+        return [];
       }
       return JSON.parse(raw);
     } catch (e) {
       console.warn("[AdsService] Error reading local ads:", e);
-      return DEFAULT_ADS.slice();
+      return [];
     }
   };
 
@@ -575,6 +539,136 @@
     var list = this._getLocalAdRequests().filter(function (r) { return r.id !== id; });
     this._saveLocalAdRequests(list);
     return true;
+  };
+
+  /* ------------------------------------------------ Sponsor Report Tokens */
+
+  var LS_REPORT_TOKENS = "sharodiya_report_tokens";
+
+  function generateCryptographicToken() {
+    if (window.crypto && window.crypto.getRandomValues) {
+      var arr = new Uint8Array(18);
+      window.crypto.getRandomValues(arr);
+      return Array.from(arr).map(function (b) { return b.toString(16).padStart(2, "0"); }).join("");
+    }
+    return "tok_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  AdsService.prototype._getLocalReportTokens = function () {
+    try {
+      var raw = localStorage.getItem(LS_REPORT_TOKENS);
+      if (!raw) {
+        return [];
+      }
+      return JSON.parse(raw);
+    } catch (e) {
+      return [];
+    }
+  };
+
+  AdsService.prototype._saveLocalReportTokens = function (list) {
+    try {
+      localStorage.setItem(LS_REPORT_TOKENS, JSON.stringify(list));
+    } catch (e) {
+      console.warn("[AdsService] Error saving report tokens:", e);
+    }
+  };
+
+  AdsService.prototype.fetchReportTokens = async function () {
+    if (this.supabase) {
+      try {
+        var res = await this.supabase
+          .from("sponsor_report_tokens")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!res.error && Array.isArray(res.data)) {
+          return res.data;
+        }
+      } catch (err) {
+        console.warn("[AdsService] fetchReportTokens exception:", err);
+      }
+    }
+    return this._getLocalReportTokens();
+  };
+
+  AdsService.prototype.getOrCreateReportToken = async function (clientName, durationDays) {
+    if (!clientName) return null;
+    var trimmed = clientName.trim();
+    var existing = await this.fetchReportTokens();
+    var activeTok = existing.find(function (t) {
+      return t.client_name && t.client_name.toLowerCase() === trimmed.toLowerCase() && t.is_active;
+    });
+    if (activeTok) {
+      return activeTok;
+    }
+    return await this.createReportToken(trimmed, durationDays || 0);
+  };
+
+  AdsService.prototype.createReportToken = async function (clientName, durationDays) {
+    var token = generateCryptographicToken();
+    var expiresAt = null;
+    if (durationDays && durationDays > 0) {
+      var d = new Date();
+      d.setDate(d.getDate() + parseInt(durationDays, 10));
+      expiresAt = d.toISOString();
+    }
+
+    var record = {
+      token: token,
+      client_name: clientName.trim(),
+      created_by: "admin",
+      is_active: true,
+      expires_at: expiresAt,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    if (this.supabase) {
+      try {
+        var res = await this.supabase.from("sponsor_report_tokens").insert([record]).select();
+        if (!res.error && res.data && res.data[0]) {
+          // sync local copy
+          var local = this._getLocalReportTokens();
+          local.unshift(res.data[0]);
+          this._saveLocalReportTokens(local);
+          return res.data[0];
+        }
+      } catch (err) {
+        console.warn("[AdsService] createReportToken error:", err);
+      }
+    }
+
+    record.id = "tok-rec-" + Date.now();
+    var localList = this._getLocalReportTokens();
+    localList.unshift(record);
+    this._saveLocalReportTokens(localList);
+    return record;
+  };
+
+  AdsService.prototype.revokeReportToken = async function (id) {
+    var nowIso = new Date().toISOString();
+    if (this.supabase) {
+      try {
+        var res = await this.supabase
+          .from("sponsor_report_tokens")
+          .update({ is_active: false, updated_at: nowIso })
+          .eq("id", id)
+          .select();
+        if (!res.error && res.data && res.data[0]) return res.data[0];
+      } catch (err) {
+        console.warn("[AdsService] revokeReportToken error:", err);
+      }
+    }
+
+    var list = this._getLocalReportTokens();
+    var idx = list.findIndex(function (t) { return t.id === id; });
+    if (idx !== -1) {
+      list[idx].is_active = false;
+      list[idx].updated_at = nowIso;
+      this._saveLocalReportTokens(list);
+      return list[idx];
+    }
+    return null;
   };
 
   window.AdsService = new AdsService();

@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/ad-island.css">
 <link rel="stylesheet" href="css/admin.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪩</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EF4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='12' cy='12' r='2'/><path d='M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14'/></svg>">
 </head>
 <body class="admin-body">
 
@@ -72,7 +72,7 @@
   <!-- Top Navigation Bar -->
   <header class="admin-topbar">
     <div class="admin-brand">
-      <span class="admin-brand-icon">🪩</span>
+      <span class="admin-brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg></span>
       <div class="admin-brand-info">
         <b>শারদীয়া Admin</b>
         <span class="badge-tag">Ad & Analytics Engine</span>
@@ -215,28 +215,36 @@
       <!-- KPI Stats Row -->
       <div class="kpi-grid">
         <div class="kpi-card">
-          <div class="kpi-icon">📢</div>
+          <div class="kpi-icon" style="color:#EF4444;background:#FEF2F2;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 13v-2z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path></svg>
+          </div>
           <div class="kpi-content">
             <span class="kpi-label">Active Campaigns</span>
             <span id="kpiActiveAds" class="kpi-value">0</span>
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon">👁️</div>
+          <div class="kpi-icon" style="color:#3B82F6;background:#EFF6FF;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </div>
           <div class="kpi-content">
             <span class="kpi-label">Total Impressions</span>
             <span id="kpiImpressions" class="kpi-value">0</span>
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon">🖱️</div>
+          <div class="kpi-icon" style="color:#10B981;background:#ECFDF5;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 3 7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="m13 13 6 6"></path></svg>
+          </div>
           <div class="kpi-content">
             <span class="kpi-label">Total Link Clicks</span>
             <span id="kpiClicks" class="kpi-value">0</span>
           </div>
         </div>
         <div class="kpi-card">
-          <div class="kpi-icon">🎯</div>
+          <div class="kpi-icon" style="color:#F59E0B;background:#FFFBEB;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+          </div>
           <div class="kpi-content">
             <span class="kpi-label">Average CTR</span>
             <span id="kpiCtr" class="kpi-value">0.00%</span>
@@ -254,8 +262,12 @@
           <select id="clientAnalyticsFilter" class="form-select filter-select">
             <option value="">All Sponsors</option>
           </select>
-          <button type="button" id="btnCopyClientLink" class="btn btn-secondary btn-sm" title="Copy shareable read-only link for client">
-            🔗 Copy Sponsor Link
+          <button type="button" id="btnOpenTokenModal" class="btn btn-primary btn-sm" title="Generate new secure shareable token">
+            + New Sponsor Link
+          </button>
+          <button type="button" id="btnCopyClientLink" class="btn btn-secondary btn-sm" title="Copy shareable read-only link for client" style="display:inline-flex;align-items:center;gap:5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            <span>Copy Sponsor Link</span>
           </button>
           <button type="button" id="btnRefreshAnalytics" class="btn btn-outline btn-sm">Refresh Data</button>
         </div>
@@ -263,6 +275,12 @@
 
       <!-- Analytics Breakdown Table -->
       <div class="card table-card">
+        <div class="card-header" style="border-bottom: 1px solid var(--admin-border); padding: 16px 20px;">
+          <div>
+            <h3 class="card-title" style="font-size:15px;">Campaign Analytics Breakdown</h3>
+            <p class="card-subtitle">Real-time impressions, click-through rates, and interaction logs</p>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="data-table">
             <thead>
@@ -280,6 +298,36 @@
             <tbody id="analyticsTableBody">
               <tr>
                 <td colspan="8" class="table-empty">Loading performance data...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Active Shareable Sponsor Links Management -->
+      <div class="card table-card" style="margin-top: 24px;">
+        <div class="card-header" style="border-bottom: 1px solid var(--admin-border); padding: 16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <h3 class="card-title" style="font-size:15px;">Cryptographically Scoped Sponsor Links</h3>
+            <p class="card-subtitle">Shareable dashboards for paying clients. Enforces zero cross-tenant data leakage.</p>
+          </div>
+          <span class="preview-note">Strict Token Authorization</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Sponsor / Client</th>
+                <th>Secure Token</th>
+                <th>Expiration</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th style="text-align: right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tokensTableBody">
+              <tr>
+                <td colspan="6" class="table-empty">Loading shareable sponsor links...</td>
               </tr>
             </tbody>
           </table>
@@ -332,7 +380,10 @@
               <h3 class="card-title">Supabase SQL Migration Script</h3>
               <p class="card-subtitle">Paste this in your Supabase SQL Editor to create tables, indexes, and RLS policies in one click.</p>
             </div>
-            <button type="button" id="btnCopySql" class="btn btn-secondary btn-sm">📋 Copy SQL</button>
+            <button type="button" id="btnCopySql" class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:5px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>
+              <span>Copy SQL</span>
+            </button>
           </div>
           <div class="card-body">
             <pre class="sql-code-block" id="sqlCodeBlock"><code>-- Tables & Policies created in supabase-schema.sql
@@ -432,7 +483,7 @@ create policy "Admins have full access to analytics" on public.ad_analytics
       <div class="form-group" style="margin-top:12px;">
         <label class="form-label" for="adInputImageUrl">Banner / Thumbnail Image URL</label>
         <input type="url" id="adInputImageUrl" class="form-input" placeholder="https://images.unsplash.com/photo-...">
-        <p class="form-hint">Square or rounded image (e.g. 100x100px or logo). If empty, festive icon 🪩 will be shown.</p>
+        <p class="form-hint">Square or rounded image (e.g. 100x100px or logo). If empty, standard sponsor icon will be shown.</p>
       </div>
 
       <div class="form-row" style="margin-top:12px;">
@@ -475,6 +526,77 @@ create policy "Admins have full access to analytics" on public.ad_analytics
         <button type="submit" id="btnAdModalSave" class="btn btn-primary">Save Advertisement</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- Modal: Generate Shareable Sponsor Link -->
+<div id="tokenModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3 class="modal-title">Generate Shareable Sponsor Link</h3>
+      <button type="button" id="btnTokenModalClose" class="modal-close-btn">&times;</button>
+    </div>
+
+    <form id="tokenForm" class="modal-form" onsubmit="return false;">
+      <p style="font-size:13px; color:var(--admin-text-muted); margin-bottom:16px;">
+        Creates a cryptographically secure, unpredictable link that gives the client direct access to their isolated performance dashboard.
+      </p>
+
+      <div class="form-group">
+        <label class="form-label">Sponsor / Client Name *</label>
+        <input type="text" id="tokenInputClient" class="form-input" placeholder="e.g. SVF Music, Pujo Fashion House" required list="sponsorDatalist">
+        <datalist id="sponsorDatalist"></datalist>
+        <span class="form-hint">Must match the client name configured in campaigns.</span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Link Expiration</label>
+        <select id="tokenInputDuration" class="form-select">
+          <option value="0">Never Expires (Permanent)</option>
+          <option value="7">7 Days</option>
+          <option value="30" selected>30 Days</option>
+          <option value="90">90 Days</option>
+        </select>
+        <span class="form-hint">Links can also be manually revoked at any time from this dashboard.</span>
+      </div>
+
+      <div id="tokenModalError" class="auth-error" hidden style="margin-top:12px;"></div>
+
+      <div class="modal-footer">
+        <button type="button" id="btnTokenModalCancel" class="btn btn-outline">Cancel</button>
+        <button type="submit" id="btnTokenModalGenerate" class="btn btn-primary">Generate & Copy Link</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: AD CREATED & REPORT GENERATED ================= -->
+<div id="adSuccessModal" class="modal-backdrop" hidden>
+  <div class="modal-card" style="max-width: 520px;">
+    <div class="modal-header" style="background:#F0FDF4;border-bottom:1px solid #BBF7D0;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <h3 class="modal-title" style="color:#166534;font-size:16px;">Campaign & Sponsor Report Created</h3>
+      </div>
+      <button type="button" id="btnAdSuccessClose" class="modal-close-btn">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <p style="font-size:13.5px;color:#334155;margin-bottom:14px;line-height:1.5;">
+        Advertisement created successfully. A dedicated, private <b>Sponsor Performance Report</b> has been automatically generated for <b id="adSuccessClientName" style="color:#0F172A;">—</b>.
+      </p>
+      <label class="form-label" for="adSuccessShareUrl">Shareable Client Report Link (Zero-Trust Isolated):</label>
+      <div style="display:flex;gap:8px;margin-top:6px;margin-bottom:16px;">
+        <input type="text" id="adSuccessShareUrl" class="form-input" readonly style="font-family:monospace;font-size:12px;background:#F8FAFC;">
+        <button type="button" id="btnAdSuccessCopy" class="btn btn-primary" style="white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+          <span id="btnAdSuccessCopyText">Copy Link</span>
+        </button>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--admin-border);padding-top:14px;">
+        <a id="adSuccessOpenLink" href="#" target="_blank" class="btn btn-outline btn-sm">Open Live Report ↗</a>
+        <button type="button" id="btnAdSuccessDone" class="btn btn-secondary btn-sm">Done</button>
+      </div>
+    </div>
   </div>
 </div>
 
