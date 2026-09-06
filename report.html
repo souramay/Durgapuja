@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="css/report.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233B82F6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><line x1='18' y1='20' x2='18' y2='10'/><line x1='12' y1='20' x2='12' y2='4'/><line x1='6' y1='20' x2='6' y2='14'/></svg>">
 </head>
 <body>
 
@@ -21,7 +21,7 @@
     <div class="header-container">
       <div class="brand-group">
         <a href="/" class="brand-link" title="Return to Sharodiya Radio">
-          <span class="brand-icon">🪩</span>
+          <span class="brand-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg></span>
           <div class="brand-text">
             <b>শারদীয়া Radio</b>
             <span class="brand-sub">Sponsor Analytics Portal</span>
@@ -59,7 +59,9 @@
 
       <!-- Error / Unauthorized State -->
       <div id="errorState" class="state-card state-card-error" hidden>
-        <div class="error-icon">🔒</div>
+        <div class="error-icon" style="display:grid;place-items:center;">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        </div>
         <h2 id="errorTitle">Access Denied</h2>
         <p id="errorMessage">Invalid, expired, or revoked report token.</p>
         <div class="error-actions">
@@ -227,7 +229,9 @@
 
         <!-- Security & Tenant Isolation Guarantee -->
         <section class="security-card">
-          <div class="security-icon">🛡️</div>
+          <div class="security-icon" style="display:grid;place-items:center;color:#10B981;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="m9 12 2 2 4-4"></path></svg>
+          </div>
           <div class="security-content">
             <h4>Cryptographic Client Isolation Guarantee</h4>
             <p>

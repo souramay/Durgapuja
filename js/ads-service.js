@@ -15,43 +15,8 @@
     ADMIN_AUTH: "sharodiya_admin_auth"
   };
 
-  // Festive default sample ads
-  var DEFAULT_ADS = [
-    {
-      id: "ad-svf-music-festive-2026",
-      title: "বাঙালির পুজোর সেরা গান শুনুন",
-      subtitle: "Exclusive Durga Puja playlist & festive specials by SVF Music",
-      badge: "SPONSORED",
-      destination_url: "https://www.youtube.com/results?search_query=svf+durga+puja+songs",
-      image_url: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=120&auto=format&fit=crop&q=80",
-      client_name: "SVF Music",
-      client_email: "sponsor@svf.in",
-      duration_seconds: 7,
-      priority: 10,
-      is_active: true,
-      start_at: null,
-      end_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: "ad-ethnic-fashion-2026",
-      title: "উৎসবের আনন্দ ও সাজপোশাক",
-      subtitle: "Durga Puja Festive Handloom & Sarees — Up to 40% Off",
-      badge: "PUJO OFFER",
-      destination_url: "https://www.myntra.com/festive-ethnic-wear",
-      image_url: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=120&auto=format&fit=crop&q=80",
-      client_name: "Pujo Bazaar Kolkata",
-      client_email: "promotions@pujobazaar.com",
-      duration_seconds: 8,
-      priority: 8,
-      is_active: true,
-      start_at: null,
-      end_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ];
+  // Zero mock ads for production
+  var DEFAULT_ADS = [];
 
   function AdsService() {
     this.supabase = null;
@@ -106,13 +71,12 @@
     try {
       var raw = localStorage.getItem(LS_KEYS.ADS);
       if (!raw) {
-        localStorage.setItem(LS_KEYS.ADS, JSON.stringify(DEFAULT_ADS));
-        return DEFAULT_ADS.slice();
+        return [];
       }
       return JSON.parse(raw);
     } catch (e) {
       console.warn("[AdsService] Error reading local ads:", e);
-      return DEFAULT_ADS.slice();
+      return [];
     }
   };
 
@@ -594,28 +558,7 @@
     try {
       var raw = localStorage.getItem(LS_REPORT_TOKENS);
       if (!raw) {
-        var defaults = [
-          {
-            id: "11111111-1111-1111-1111-111111111111",
-            token: "svf-music-demo-token-98f2a1b4e6",
-            client_name: "SVF Music",
-            created_by: "admin",
-            is_active: true,
-            expires_at: null,
-            created_at: new Date().toISOString()
-          },
-          {
-            id: "22222222-2222-2222-2222-222222222222",
-            token: "pujo-fashion-demo-token-4c7b8e1a",
-            client_name: "Pujo Fashion House",
-            created_by: "admin",
-            is_active: true,
-            expires_at: null,
-            created_at: new Date().toISOString()
-          }
-        ];
-        localStorage.setItem(LS_REPORT_TOKENS, JSON.stringify(defaults));
-        return defaults;
+        return [];
       }
       return JSON.parse(raw);
     } catch (e) {
@@ -638,7 +581,7 @@
           .from("sponsor_report_tokens")
           .select("*")
           .order("created_at", { ascending: false });
-        if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+        if (!res.error && Array.isArray(res.data)) {
           return res.data;
         }
       } catch (err) {
@@ -646,6 +589,19 @@
       }
     }
     return this._getLocalReportTokens();
+  };
+
+  AdsService.prototype.getOrCreateReportToken = async function (clientName, durationDays) {
+    if (!clientName) return null;
+    var trimmed = clientName.trim();
+    var existing = await this.fetchReportTokens();
+    var activeTok = existing.find(function (t) {
+      return t.client_name && t.client_name.toLowerCase() === trimmed.toLowerCase() && t.is_active;
+    });
+    if (activeTok) {
+      return activeTok;
+    }
+    return await this.createReportToken(trimmed, durationDays || 0);
   };
 
   AdsService.prototype.createReportToken = async function (clientName, durationDays) {

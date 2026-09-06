@@ -346,10 +346,11 @@
 
       // Media
       var thumbHtml = "";
+      var fallbackSvg = '<span class="campaign-fallback"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg></span>';
       if (c.image_url) {
-        thumbHtml = '<img src="' + escapeHtml(c.image_url) + '" alt="" class="campaign-thumb" onerror="this.outerHTML=\'<span class=\\\'campaign-fallback\\\'>🪩</span>\'">';
+        thumbHtml = '<img src="' + escapeHtml(c.image_url) + '" alt="" class="campaign-thumb" onerror="this.outerHTML=\'' + fallbackSvg.replace(/'/g, "\\'") + '\'">';
       } else {
-        thumbHtml = '<span class="campaign-fallback">🪩</span>';
+        thumbHtml = fallbackSvg;
       }
 
       // Schedule Range
